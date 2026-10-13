@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email != null && (
+          request.auth.token.email == 'danielowino233@gmail.com' ||
+          request.auth.token.email == 'freshperspectiveorganization@gmail.com'
+        )) ||
+        // Check custom claim or admin collection if synced
+        request.auth.token.admin == true
+      );
+    }
+
+    // Public can read uploaded images
+    match /{allPaths=**} {
+      allow read: if true;
+      // Only authorized admin users can upload or delete assets (max 10MB per image)
+      allow write: if isSignedIn()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isSignedIn();
+    }
+  }
+}

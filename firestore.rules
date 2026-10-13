@@ -1,0 +1,111 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email != null && (
+          request.auth.token.email == 'danielowino233@gmail.com' ||
+          request.auth.token.email == 'freshperspectiveorganization@gmail.com'
+        ))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Site settings
+    match /site_settings/{settingId} {
+      allow read: if isValidId(settingId);
+      allow write: if isAdmin() && isValidId(settingId);
+    }
+
+    // Professionals
+    match /professionals/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // Services
+    match /services/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // Projects
+    match /projects/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // Gallery
+    match /gallery/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // Leadership
+    match /leadership/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // Insights
+    match /insights/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // Events
+    match /events/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // Publications
+    match /publications/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // FAQs
+    match /faqs/{id} {
+      allow read: if isValidId(id) && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin() && isValidId(id);
+    }
+
+    // Inquiries: public can ONLY create with valid data shape. Never public read.
+    match /inquiries/{inquiryId} {
+      allow create: if isValidId(inquiryId)
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 2
+        && request.resource.data.fullName.size() <= 100
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 5
+        && request.resource.data.email.size() <= 100
+        && request.resource.data.service is string
+        && request.resource.data.service.size() <= 100
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000;
+      allow read, update, delete: if isAdmin() && isValidId(inquiryId);
+    }
+
+    // Admins registry
+    match /admins/{adminUid} {
+      allow read: if isSignedIn() && (request.auth.uid == adminUid || isAdmin());
+      allow write: if isAdmin() && isValidId(adminUid);
+    }
+  }
+}

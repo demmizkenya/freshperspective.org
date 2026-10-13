@@ -1,0 +1,260 @@
+{
+  "entities": {
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "General settings and profile of Fresh Perspective Organization",
+      "type": "object",
+      "properties": {
+        "orgName": { "type": "string", "maxLength": 100 },
+        "tagline": { "type": "string", "maxLength": 200 },
+        "heroHeadline": { "type": "string", "maxLength": 200 },
+        "heroDescription": { "type": "string", "maxLength": 500 },
+        "aboutText": { "type": "string", "maxLength": 2000 },
+        "whoWeAre": { "type": "string", "maxLength": 1000 },
+        "mission": { "type": "string", "maxLength": 1000 },
+        "vision": { "type": "string", "maxLength": 1000 },
+        "coreValues": { "type": "string", "maxLength": 500 },
+        "email": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "whatsappUrl": { "type": "string", "maxLength": 200 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgName", "tagline", "email"]
+    },
+    "Professional": {
+      "title": "Professional",
+      "description": "Team member and professional specialist at Fresh Perspective Organization",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "maxLength": 100 },
+        "title": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 80 },
+        "specialization": { "type": "string", "maxLength": 150 },
+        "bio": { "type": "string", "maxLength": 1000 },
+        "skills": { "type": "string", "maxLength": 500 },
+        "photoUrl": { "type": "string", "maxLength": 1000 },
+        "photoPath": { "type": "string", "maxLength": 500 },
+        "portfolioUrl": { "type": "string", "maxLength": 300 },
+        "socialUrl": { "type": "string", "maxLength": 300 },
+        "order": { "type": "number" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "title", "category", "isPublished"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Agency service offerings",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 800 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "imagePath": { "type": "string", "maxLength": 500 },
+        "order": { "type": "number" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "isPublished"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Portfolio item or client project",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "category": { "type": "string", "maxLength": 80 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "imagePath": { "type": "string", "maxLength": 500 },
+        "projectUrl": { "type": "string", "maxLength": 300 },
+        "isFeatured": { "type": "boolean" },
+        "isPublished": { "type": "boolean" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "category", "isPublished"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Image gallery photo with metadata",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 120 },
+        "caption": { "type": "string", "maxLength": 500 },
+        "category": { "type": "string", "maxLength": 80 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "imagePath": { "type": "string", "maxLength": 500 },
+        "isPublished": { "type": "boolean" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["imageUrl", "isPublished"]
+    },
+    "LeadershipMember": {
+      "title": "LeadershipMember",
+      "description": "Leadership profile",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "maxLength": 100 },
+        "title": { "type": "string", "maxLength": 100 },
+        "bio": { "type": "string", "maxLength": 1000 },
+        "photoUrl": { "type": "string", "maxLength": 1000 },
+        "photoPath": { "type": "string", "maxLength": 500 },
+        "order": { "type": "number" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "title", "isPublished"]
+    },
+    "Insight": {
+      "title": "Insight",
+      "description": "Article or blog post",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 150 },
+        "summary": { "type": "string", "maxLength": 500 },
+        "content": { "type": "string", "maxLength": 10000 },
+        "category": { "type": "string", "maxLength": 80 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "imagePath": { "type": "string", "maxLength": 500 },
+        "publishedDate": { "type": "string", "maxLength": 50 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "summary", "isPublished"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Agency workshop, summit or webinar event",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "date": { "type": "string", "maxLength": 80 },
+        "location": { "type": "string", "maxLength": 120 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "imagePath": { "type": "string", "maxLength": 500 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "date", "isPublished"]
+    },
+    "Publication": {
+      "title": "Publication",
+      "description": "Whitepaper, case study, or agency publication",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "linkUrl": { "type": "string", "maxLength": 500 },
+        "publishedDate": { "type": "string", "maxLength": 80 },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "isPublished"]
+    },
+    "FAQ": {
+      "title": "FAQ",
+      "description": "Frequently asked question",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string", "maxLength": 250 },
+        "answer": { "type": "string", "maxLength": 2000 },
+        "category": { "type": "string", "maxLength": 80 },
+        "order": { "type": "number" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["question", "answer", "isPublished"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Visitor quote request or contact inquiry",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "organization": { "type": "string", "maxLength": 120 },
+        "service": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "budgetRange": { "type": "string", "maxLength": 80 },
+        "preferredDeadline": { "type": "string", "maxLength": 80 },
+        "status": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "email", "service", "description"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator user profile",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/site_settings/{settingId}": {
+      "schema": "#/entities/SiteSettings",
+      "description": "Global website content and organization contact info"
+    },
+    "/professionals/{professionalId}": {
+      "schema": "#/entities/Professional",
+      "description": "Team professional profiles"
+    },
+    "/services/{serviceId}": {
+      "schema": "#/entities/Service",
+      "description": "Agency services offerings"
+    },
+    "/projects/{projectId}": {
+      "schema": "#/entities/Project",
+      "description": "Portfolio and completed works"
+    },
+    "/gallery/{galleryId}": {
+      "schema": "#/entities/GalleryItem",
+      "description": "Organization gallery images and media"
+    },
+    "/leadership/{leaderId}": {
+      "schema": "#/entities/LeadershipMember",
+      "description": "Leadership board and executive team"
+    },
+    "/insights/{insightId}": {
+      "schema": "#/entities/Insight",
+      "description": "Blog posts, articles and insights"
+    },
+    "/events/{eventId}": {
+      "schema": "#/entities/Event",
+      "description": "Upcoming and past events"
+    },
+    "/publications/{publicationId}": {
+      "schema": "#/entities/Publication",
+      "description": "Reports, whitepapers and publications"
+    },
+    "/faqs/{faqId}": {
+      "schema": "#/entities/FAQ",
+      "description": "Frequently asked questions"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "#/entities/Inquiry",
+      "description": "Visitor contact and quote inquiries"
+    },
+    "/admins/{adminUid}": {
+      "schema": "#/entities/AdminUser",
+      "description": "Authorized admin users registry"
+    }
+  }
+}
