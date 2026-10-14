@@ -48,7 +48,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({ onSelectServic
               <div className="pt-4 border-t border-slate-200">
                 <button
                   onClick={() => onSelectServiceForQuote(service.title)}
-                  className="w-full text-center text-base font-extrabold text-[#0B132B] bg-slate-50 hover:bg-lime-200 border border-slate-300 hover:border-lime-400 py-3.5 rounded-xl transition-all shadow-2xs"
+                  className="w-full text-center text-base font-extrabold text-[#0B132B] bg-[#4ade80] hover:bg-[#22c55e] border border-green-400/40 hover:border-green-500 py-3.5 rounded-xl transition-all shadow-sm hover:shadow animate-quote-pulse"
                 >
                   Request a Quote →
                 </button>

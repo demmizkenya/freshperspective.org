@@ -116,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
         <div className="hidden sm:flex items-center gap-3">
           <button
             onClick={onRequestQuote}
-            className="bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-sm hover:shadow transition-all"
+            className="bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-sm hover:shadow transition-all animate-quote-pulse"
           >
             Request a Quote
           </button>
@@ -126,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
         <div className="flex xl:hidden items-center gap-2">
           <button
             onClick={onRequestQuote}
-            className="text-xs font-bold bg-[#84cc16] text-[#0B132B] px-3 py-1.5 rounded"
+            className="text-xs font-bold bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] px-3 py-1.5 rounded transition-all animate-quote-pulse"
           >
             Quote
           </button>
@@ -163,19 +163,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
                 setMobileMenuOpen(false);
                 onRequestQuote();
               }}
-              className="w-full bg-[#84cc16] text-[#0B132B] font-bold py-2 rounded text-xs"
+              className="w-full bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] font-bold py-2.5 rounded-xl text-xs transition-all animate-quote-pulse"
             >
               Request a Quote
             </button>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenAdmin();
-              }}
-              className="w-full bg-slate-100 text-slate-800 font-semibold py-1.5 rounded text-xs"
-            >
-              {isAdmin ? 'Admin Portal (Logged In)' : 'Admin Login'}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAdmin();
+                }}
+                className="w-full bg-slate-100 text-slate-800 font-semibold py-1.5 rounded text-xs"
+              >
+                Admin Portal (Logged In)
+              </button>
+            )}
           </div>
         </div>
       )}

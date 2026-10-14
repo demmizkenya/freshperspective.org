@@ -299,9 +299,9 @@ export const ContactAndQuoteSection: React.FC<ContactAndQuoteSectionProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-bold py-3 rounded-lg text-xs transition-colors disabled:opacity-60"
+                    className="w-full bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] font-extrabold py-3.5 rounded-xl text-sm transition-all shadow-sm hover:shadow disabled:opacity-60 animate-quote-pulse"
                   >
-                    {isSubmitting ? 'Saving to Cloud Firestore...' : 'Submit Project Brief'}
+                    {isSubmitting ? 'Saving to Cloud Firestore...' : 'Submit Project Brief & Request Quote'}
                   </button>
                 </form>
               )}

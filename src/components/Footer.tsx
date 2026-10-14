@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 
 interface FooterProps {
@@ -7,9 +7,32 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onRequestQuote }) => {
-  const { siteSettings } = useData();
+  const { siteSettings, isAdmin } = useData();
+  const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false);
+  const adminDropdownRef = useRef<HTMLDivElement>(null);
   const currentYear = new Date().getFullYear();
   const socialLinks = siteSettings.socialLinks;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (adminDropdownRef.current && !adminDropdownRef.current.contains(event.target as Node)) {
+        setIsAdminDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsAdminDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -160,18 +183,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onRequestQuote }) =
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <button
                 onClick={onRequestQuote}
-                className="w-full bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-bold py-2 px-3 rounded text-xs"
+                className="w-full bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow animate-quote-pulse"
               >
                 Request a Quote
-              </button>
-              <button
-                onClick={onOpenAdmin}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 px-3 rounded text-xs"
-              >
-                Admin Portal
               </button>
             </div>
           </div>
@@ -182,11 +199,50 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onRequestQuote }) =
           <div>
             © {currentYear} Fresh Perspective Organization. All rights reserved.
           </div>
-          <button onClick={scrollToTop} className="hover:text-slate-300">
-            Back to Top ↑
-          </button>
+
+          <div className="flex items-center gap-4">
+            {/* Discreet Admin Login Dropdown */}
+            <div className="relative" ref={adminDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsAdminDropdownOpen((prev) => !prev)}
+                className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800/60"
+                aria-expanded={isAdminDropdownOpen}
+                aria-label="Staff and admin portal access"
+              >
+                <span>Portal Access</span>
+                <span className="text-[9px] opacity-75">
+                  {isAdminDropdownOpen ? '▲' : '▼'}
+                </span>
+              </button>
+
+              {isAdminDropdownOpen && (
+                <div className="absolute right-0 bottom-full mb-2 w-48 bg-[#0B132B] border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 text-xs">
+                  <div className="px-2 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-800 mb-1">
+                    Authorized Access
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAdminDropdownOpen(false);
+                      onOpenAdmin();
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 font-semibold text-xs flex items-center justify-between transition-colors group"
+                  >
+                    <span>{isAdmin ? 'Admin Dashboard' : 'Admin Login'}</span>
+                    <span className="text-[#4ade80] group-hover:translate-x-0.5 transition-transform">→</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button onClick={scrollToTop} className="hover:text-slate-300 transition-colors">
+              Back to Top ↑
+            </button>
+          </div>
         </div>
       </div>
     </footer>
   );
 };
+

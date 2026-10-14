@@ -187,7 +187,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const settingsDocRef = doc(db, 'site_settings', 'general');
         const unsubSettings = onSnapshot(settingsDocRef, (snap) => {
           if (snap.exists()) {
-            setSiteSettings(snap.data() as SiteSettings);
+            const data = snap.data() as Partial<SiteSettings>;
+            setSiteSettings({
+              ...DEFAULT_SITE_SETTINGS,
+              ...data,
+              ceoProfile: {
+                ...DEFAULT_SITE_SETTINGS.ceoProfile,
+                ...(data.ceoProfile || {}),
+              },
+              socialLinks: {
+                ...DEFAULT_SITE_SETTINGS.socialLinks,
+                ...(data.socialLinks || {}),
+              },
+            });
           }
         }, (err) => {
           console.warn('Settings listener note:', err.message);
@@ -485,29 +497,76 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(null);
   };
 
-  // Admin CRUD operations
+  // Admin CRUD operations - Rock-solid persistence treating latest successfully saved content as authoritative
   const updateSiteSettings = async (settings: Partial<SiteSettings>) => {
-    const merged = { ...siteSettings, ...settings, updatedAt: new Date().toISOString() };
-    setSiteSettings(merged);
+    const docRef = doc(db, 'site_settings', 'general');
     try {
-      await setDoc(doc(db, 'site_settings', 'general'), merged, { merge: true });
-    } catch (err) {
-      console.warn('Firestore updateSiteSettings note:', err);
-      // Attempt clean merge update
+      // 1. Fetch freshest document directly from Firestore to prevent overwriting concurrent updates
+      let serverData: Partial<SiteSettings> = {};
       try {
-        await updateDoc(doc(db, 'site_settings', 'general'), settings as any);
-      } catch (innerErr) {
-        handleFirestoreError(innerErr, OperationType.UPDATE, 'site_settings/general');
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          serverData = snap.data() as Partial<SiteSettings>;
+        }
+      } catch (readErr) {
+        console.warn('Could not read existing site_settings before merge, using local state:', readErr);
+        serverData = siteSettings;
       }
+
+      const now = new Date().toISOString();
+      const merged: SiteSettings = {
+        ...DEFAULT_SITE_SETTINGS,
+        ...serverData,
+        ...siteSettings,
+        ...settings,
+        ceoProfile: {
+          ...DEFAULT_SITE_SETTINGS.ceoProfile,
+          ...(serverData.ceoProfile || {}),
+          ...(siteSettings.ceoProfile || {}),
+          ...(settings.ceoProfile || {}),
+        },
+        socialLinks: {
+          ...DEFAULT_SITE_SETTINGS.socialLinks,
+          ...(serverData.socialLinks || {}),
+          ...(siteSettings.socialLinks || {}),
+          ...(settings.socialLinks || {}),
+        },
+        updatedAt: now,
+      };
+
+      // 2. Persist permanently to Cloud Firestore
+      await setDoc(docRef, merged, { merge: true });
+
+      // 3. ONLY update the local interface state AFTER the database save completes successfully
+      setSiteSettings(merged);
+    } catch (err: any) {
+      console.error('Firestore updateSiteSettings error:', err);
+      handleFirestoreError(err, OperationType.UPDATE, 'site_settings/general');
+      throw err;
     }
   };
 
   const saveCeoProfile = async (ceo: Partial<SiteSettings['ceoProfile']>) => {
-    const updatedCeo = {
-      ...siteSettings.ceoProfile,
+    const docRef = doc(db, 'site_settings', 'general');
+    let currentCeo = { ...DEFAULT_SITE_SETTINGS.ceoProfile, ...siteSettings.ceoProfile };
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as Partial<SiteSettings>;
+        if (data.ceoProfile) {
+          currentCeo = { ...currentCeo, ...data.ceoProfile };
+        }
+      }
+    } catch {
+      // Use current state as base
+    }
+
+    const updatedCeo: SiteSettings['ceoProfile'] = {
+      ...currentCeo,
       ...ceo,
       updatedAt: new Date().toISOString(),
     };
+
     await updateSiteSettings({ ceoProfile: updatedCeo });
   };
 
@@ -523,24 +582,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (isNew) {
-        await addDoc(collection(db, 'professionals'), dataToSave);
+        const docRef = await addDoc(collection(db, 'professionals'), dataToSave);
+        setProfessionals((prev) => [...prev, { id: docRef.id, ...dataToSave } as Professional]);
       } else {
         const { id, ...rest } = dataToSave;
         await updateDoc(doc(db, 'professionals', id as string), rest);
+        setProfessionals((prev) =>
+          prev.map((p) => (p.id === id ? ({ ...p, ...dataToSave } as Professional) : p))
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, prof.id ? OperationType.UPDATE : OperationType.CREATE, 'professionals');
+      throw err;
     }
   };
 
   const deleteProfessional = async (id: string, photoPath?: string) => {
     try {
       await deleteDoc(doc(db, 'professionals', id));
+      setProfessionals((prev) => prev.filter((p) => p.id !== id));
       if (photoPath) {
         await deleteStorageFile(photoPath);
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `professionals/${id}`);
+      throw err;
     }
   };
 
@@ -557,22 +623,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (isNew) {
         const { id, ...rest } = dataToSave;
-        await addDoc(collection(db, 'services'), rest);
+        const docRef = await addDoc(collection(db, 'services'), rest);
+        setServices((prev) => [...prev, { id: docRef.id, ...rest } as Service]);
       } else {
         const { id, ...rest } = dataToSave;
         await updateDoc(doc(db, 'services', id as string), rest);
+        setServices((prev) =>
+          prev.map((s) => (s.id === id ? ({ ...s, ...dataToSave } as Service) : s))
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'services');
+      throw err;
     }
   };
 
   const deleteService = async (id: string, imagePath?: string) => {
     try {
       await deleteDoc(doc(db, 'services', id));
+      setServices((prev) => prev.filter((s) => s.id !== id));
       if (imagePath) await deleteStorageFile(imagePath);
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `services/${id}`);
+      throw err;
     }
   };
 
@@ -589,22 +662,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (isNew) {
-        await addDoc(collection(db, 'projects'), dataToSave);
+        const docRef = await addDoc(collection(db, 'projects'), dataToSave);
+        setProjects((prev) => [...prev, { id: docRef.id, ...dataToSave } as Project]);
       } else {
         const { id, ...rest } = dataToSave;
         await updateDoc(doc(db, 'projects', id as string), rest);
+        setProjects((prev) =>
+          prev.map((p) => (p.id === id ? ({ ...p, ...dataToSave } as Project) : p))
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'projects');
+      throw err;
     }
   };
 
   const deleteProject = async (id: string, imagePath?: string) => {
     try {
       await deleteDoc(doc(db, 'projects', id));
+      setProjects((prev) => prev.filter((p) => p.id !== id));
       if (imagePath) await deleteStorageFile(imagePath);
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `projects/${id}`);
+      throw err;
     }
   };
 
@@ -629,17 +709,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           prev.map((g) => (g.id === id ? ({ ...g, ...dataToSave } as GalleryItem) : g))
         );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'gallery');
+      throw err;
     }
   };
 
   const deleteGalleryItem = async (id: string, imagePath?: string) => {
     try {
       await deleteDoc(doc(db, 'gallery', id));
+      setGalleryItems((prev) => prev.filter((g) => g.id !== id));
       if (imagePath) await deleteStorageFile(imagePath);
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `gallery/${id}`);
+      throw err;
     }
   };
 
@@ -655,22 +738,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (isNew) {
-        await addDoc(collection(db, 'leadership'), dataToSave);
+        const docRef = await addDoc(collection(db, 'leadership'), dataToSave);
+        setLeadership((prev) => [...prev, { id: docRef.id, ...dataToSave } as LeadershipMember]);
       } else {
         const { id, ...rest } = dataToSave;
         await updateDoc(doc(db, 'leadership', id as string), rest);
+        setLeadership((prev) =>
+          prev.map((l) => (l.id === id ? ({ ...l, ...dataToSave } as LeadershipMember) : l))
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'leadership');
+      throw err;
     }
   };
 
   const deleteLeadership = async (id: string, photoPath?: string) => {
     try {
       await deleteDoc(doc(db, 'leadership', id));
+      setLeadership((prev) => prev.filter((l) => l.id !== id));
       if (photoPath) await deleteStorageFile(photoPath);
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `leadership/${id}`);
+      throw err;
     }
   };
 
@@ -685,22 +775,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (isNew) {
-        await addDoc(collection(db, 'insights'), dataToSave);
+        const docRef = await addDoc(collection(db, 'insights'), dataToSave);
+        setInsights((prev) => [...prev, { id: docRef.id, ...dataToSave } as Insight]);
       } else {
         const { id, ...rest } = dataToSave;
         await updateDoc(doc(db, 'insights', id as string), rest);
+        setInsights((prev) =>
+          prev.map((ins) => (ins.id === id ? ({ ...ins, ...dataToSave } as Insight) : ins))
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'insights');
+      throw err;
     }
   };
 
   const deleteInsight = async (id: string, imagePath?: string) => {
     try {
       await deleteDoc(doc(db, 'insights', id));
+      setInsights((prev) => prev.filter((ins) => ins.id !== id));
       if (imagePath) await deleteStorageFile(imagePath);
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `insights/${id}`);
+      throw err;
     }
   };
 
@@ -715,22 +812,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (isNew) {
-        await addDoc(collection(db, 'events'), dataToSave);
+        const docRef = await addDoc(collection(db, 'events'), dataToSave);
+        setEvents((prev) => [...prev, { id: docRef.id, ...dataToSave } as EventItem]);
       } else {
         const { id, ...rest } = dataToSave;
         await updateDoc(doc(db, 'events', id as string), rest);
+        setEvents((prev) =>
+          prev.map((e) => (e.id === id ? ({ ...e, ...dataToSave } as EventItem) : e))
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'events');
+      throw err;
     }
   };
 
   const deleteEvent = async (id: string, imagePath?: string) => {
     try {
       await deleteDoc(doc(db, 'events', id));
+      setEvents((prev) => prev.filter((e) => e.id !== id));
       if (imagePath) await deleteStorageFile(imagePath);
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `events/${id}`);
+      throw err;
     }
   };
 
@@ -745,21 +849,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       if (isNew) {
-        await addDoc(collection(db, 'publications'), dataToSave);
+        const docRef = await addDoc(collection(db, 'publications'), dataToSave);
+        setPublications((prev) => [...prev, { id: docRef.id, ...dataToSave } as Publication]);
       } else {
         const { id, ...rest } = dataToSave;
         await updateDoc(doc(db, 'publications', id as string), rest);
+        setPublications((prev) =>
+          prev.map((p) => (p.id === id ? ({ ...p, ...dataToSave } as Publication) : p))
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'publications');
+      throw err;
     }
   };
 
   const deletePublication = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'publications', id));
-    } catch (err) {
+      setPublications((prev) => prev.filter((p) => p.id !== id));
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `publications/${id}`);
+      throw err;
     }
   };
 
@@ -776,21 +887,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (isNew) {
         const { id, ...rest } = dataToSave;
-        await addDoc(collection(db, 'faqs'), rest);
+        const docRef = await addDoc(collection(db, 'faqs'), rest);
+        setFaqs((prev) => [...prev, { id: docRef.id, ...rest } as FAQ]);
       } else {
         const { id, ...rest } = dataToSave;
         await updateDoc(doc(db, 'faqs', id as string), rest);
+        setFaqs((prev) =>
+          prev.map((f) => (f.id === id ? ({ ...f, ...dataToSave } as FAQ) : f))
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'faqs');
+      throw err;
     }
   };
 
   const deleteFAQ = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'faqs', id));
-    } catch (err) {
+      setFaqs((prev) => prev.filter((f) => f.id !== id));
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `faqs/${id}`);
+      throw err;
     }
   };
 
@@ -798,8 +916,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await updateDoc(doc(db, 'inquiries', id), { status });
       setInquiries((prev) => prev.map((inq) => (inq.id === id ? { ...inq, status } : inq)));
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.UPDATE, `inquiries/${id}`);
+      throw err;
     }
   };
 
@@ -807,16 +926,47 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await deleteDoc(doc(db, 'inquiries', id));
       setInquiries((prev) => prev.filter((inq) => inq.id !== id));
-    } catch (err) {
+    } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, `inquiries/${id}`);
+      throw err;
     }
   };
 
-  // One-click seed of genuine baseline data to Firestore
+  // One-click seed of genuine baseline data to Firestore without overwriting custom uploaded content
   const seedBaselineData = async () => {
     try {
-      // 1. Site settings
-      await setDoc(doc(db, 'site_settings', 'general'), DEFAULT_SITE_SETTINGS, { merge: true });
+      // 1. Site settings - protect newly uploaded logos or CEO profiles from being wiped out
+      const docRef = doc(db, 'site_settings', 'general');
+      let existingSettings: Partial<SiteSettings> = {};
+      try {
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          existingSettings = snap.data() as Partial<SiteSettings>;
+        }
+      } catch {
+        existingSettings = siteSettings;
+      }
+
+      const safeSeed: SiteSettings = {
+        ...DEFAULT_SITE_SETTINGS,
+        ...existingSettings,
+        logoUrl: existingSettings.logoUrl || siteSettings.logoUrl || '',
+        logoPath: existingSettings.logoPath || siteSettings.logoPath || '',
+        ceoProfile: {
+          ...DEFAULT_SITE_SETTINGS.ceoProfile,
+          ...(existingSettings.ceoProfile || {}),
+          ...(siteSettings.ceoProfile || {}),
+        },
+        socialLinks: {
+          ...DEFAULT_SITE_SETTINGS.socialLinks,
+          ...(existingSettings.socialLinks || {}),
+          ...(siteSettings.socialLinks || {}),
+        },
+        updatedAt: new Date().toISOString(),
+      };
+
+      await setDoc(docRef, safeSeed, { merge: true });
+      setSiteSettings(safeSeed);
 
       // 2. Services
       for (const s of DEFAULT_SERVICES) {
@@ -835,9 +985,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updatedAt: new Date().toISOString(),
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Seed baseline error:', err);
       handleFirestoreError(err, OperationType.WRITE, 'all');
+      throw err;
     }
   };
 
