@@ -16,6 +16,7 @@ import { FaqsSection } from './components/FaqsSection';
 import { ContactAndQuoteSection } from './components/ContactAndQuoteSection';
 import { Footer } from './components/Footer';
 import { AdminDashboard } from './components/AdminDashboard';
+import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 
 export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -91,24 +92,16 @@ export default function App() {
         />
 
         {/* 8. Insights & Articles */}
-        <InsightsSection
-          onOpenAdminAddInsight={() => handleOpenAdminWithTab('insights')}
-        />
+        <InsightsSection />
 
         {/* 9. Events, Summits & Workshops */}
-        <EventsSection
-          onOpenAdminAddEvent={() => handleOpenAdminWithTab('events')}
-        />
+        <EventsSection />
 
         {/* 10. Publications & Whitepapers */}
-        <PublicationsSection
-          onOpenAdminAddPub={() => handleOpenAdminWithTab('publications')}
-        />
+        <PublicationsSection />
 
         {/* 11. Frequently Asked Questions */}
-        <FaqsSection
-          onOpenAdminAddFaq={() => handleOpenAdminWithTab('faqs')}
-        />
+        <FaqsSection />
 
         {/* 12. Contact Us & Quote Submission System */}
         <ContactAndQuoteSection initialService={selectedQuoteService} />
@@ -118,6 +111,9 @@ export default function App() {
           onOpenAdmin={() => handleOpenAdminWithTab('inquiries')}
           onRequestQuote={() => scrollToQuote()}
         />
+
+        {/* Floating WhatsApp Quick Action (Bottom-Left with Pulse Animation) */}
+        <FloatingWhatsApp />
 
         {/* Administrator Portal Modal */}
         <AdminDashboard

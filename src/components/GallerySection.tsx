@@ -13,61 +13,73 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ onOpenAdminAddGa
   const published = galleryItems.filter((item) => item.isPublished);
 
   return (
-    <section id="gallery" className="py-16 md:py-20 bg-white border-b border-slate-200">
+    <section id="gallery" className="py-20 md:py-28 bg-white border-b border-slate-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-          <div>
-            <div className="inline-block text-xs font-bold uppercase tracking-wider text-lime-800 bg-lime-100 px-3 py-1 rounded mb-3">
-              Media
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
+          <div className="max-w-3xl">
+            <div className="inline-block text-xs sm:text-sm font-black uppercase tracking-wider text-lime-950 bg-lime-200 px-4 py-1.5 rounded-lg mb-3 border border-lime-300">
+              Media & Production
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B132B] tracking-tight mb-2">
-              Agency Gallery
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#0B132B] tracking-tight mb-3">
+              Agency Visual Gallery
             </h2>
-            <p className="text-sm text-slate-600">
-              Moments from our production studio, workshops, and client engagements.
+            <p className="text-lg sm:text-xl text-slate-800 font-semibold leading-relaxed">
+              Moments from our production studio, client consultative workshops, and active project engagements.
             </p>
           </div>
 
-          {isAdmin && (
+          {/* Admin-only button: HIDDEN from public visitors, only visible to authenticated admin */}
+          {isAdmin && onOpenAdminAddGallery && (
             <button
               onClick={onOpenAdminAddGallery}
-              className="bg-[#0B132B] hover:bg-slate-800 text-lime-400 font-semibold px-4 py-2 rounded-lg text-xs"
+              className="bg-[#0B132B] hover:bg-slate-800 text-lime-400 font-bold px-4 py-2.5 rounded-xl text-xs inline-flex items-center gap-1.5 shrink-0 shadow-sm transition-all"
             >
-              + Upload Image
+              <span>+ Add Gallery Photo (Admin)</span>
             </button>
           )}
         </div>
 
         {published.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {published.map((item) => (
               <div
                 key={item.id}
                 onClick={() => setActiveItem(item)}
-                className="group relative aspect-square bg-slate-100 rounded-xl overflow-hidden cursor-pointer border border-slate-200 hover:border-lime-400 transition-colors"
+                className="group relative aspect-square bg-slate-100 rounded-2xl overflow-hidden cursor-pointer border border-slate-200 hover:border-lime-400 hover:shadow-lg transition-all"
               >
                 <img
                   src={item.imageUrl}
                   alt={item.title || 'Gallery image'}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity p-3 flex flex-col justify-end text-white text-xs">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-5 flex flex-col justify-end text-white">
                   {item.category && (
-                    <span className="text-[10px] font-bold uppercase text-lime-400 mb-1">
+                    <span className="text-xs font-black uppercase text-lime-400 mb-1">
                       {item.category}
                     </span>
                   )}
-                  <h4 className="font-bold line-clamp-1">{item.title}</h4>
+                  {item.title && (
+                    <h4 className="font-bold text-sm sm:text-base text-white line-clamp-2">
+                      {item.title}
+                    </h4>
+                  )}
+                  {item.caption && (
+                    <p className="text-xs text-slate-300 line-clamp-2 mt-1">
+                      {item.caption}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center max-w-md mx-auto">
-            <h3 className="text-base font-bold text-[#0B132B] mb-1">Gallery Awaiting Photos</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Photographs uploaded by the administrator will automatically appear here.
+          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-xs">
+            <h3 className="text-lg font-black text-[#0B132B] mb-2">
+              Visual Media In Curation
+            </h3>
+            <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
+              Official agency photographs and behind-the-scenes visual media will appear here once published.
             </p>
           </div>
         )}
@@ -76,37 +88,41 @@ export const GallerySection: React.FC<GallerySectionProps> = ({ onOpenAdminAddGa
       {/* Lightbox Modal */}
       {activeItem && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setActiveItem(null)}
         >
           <div
-            className="max-w-3xl max-h-[90vh] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 flex flex-col relative"
+            className="max-w-4xl w-full bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setActiveItem(null)}
-              className="absolute top-3 right-3 z-10 text-white bg-black/70 hover:bg-black w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/60 text-white hover:bg-black flex items-center justify-center font-bold text-lg"
             >
               ✕
             </button>
-            <div className="flex-1 overflow-hidden flex items-center justify-center bg-black">
+            <div className="max-h-[75vh] flex items-center justify-center bg-black">
               <img
                 src={activeItem.imageUrl}
-                alt={activeItem.title}
+                alt={activeItem.title || 'Enlarged photo'}
                 className="max-h-[75vh] w-auto max-w-full object-contain"
               />
             </div>
-            <div className="p-3 bg-slate-900 text-white border-t border-slate-800 text-xs">
-              {activeItem.category && (
-                <span className="text-[10px] font-bold text-lime-400 uppercase block">
-                  {activeItem.category}
-                </span>
-              )}
-              <h3 className="font-bold text-white text-sm">{activeItem.title}</h3>
-              {activeItem.caption && (
-                <p className="text-slate-400 mt-1">{activeItem.caption}</p>
-              )}
-            </div>
+            {(activeItem.title || activeItem.caption || activeItem.category) && (
+              <div className="p-6 bg-[#0B132B] text-white border-t border-slate-800">
+                {activeItem.category && (
+                  <span className="text-xs font-black uppercase text-lime-400 mb-1.5 block">
+                    {activeItem.category}
+                  </span>
+                )}
+                {activeItem.title && (
+                  <h3 className="text-xl font-bold mb-2">{activeItem.title}</h3>
+                )}
+                {activeItem.caption && (
+                  <p className="text-sm text-slate-300 leading-relaxed">{activeItem.caption}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

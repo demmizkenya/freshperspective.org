@@ -69,19 +69,34 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
       </div>
 
       {/* Main navigation */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand */}
-        <a href="#home" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded bg-[#0B132B] text-lime-400 flex items-center justify-center font-black text-sm">
-            FP
-          </div>
-          <span className="font-extrabold text-sm sm:text-base text-[#0B132B] tracking-tight uppercase">
-            Fresh Perspective
-          </span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+        {/* Brand with Dynamic Organization Logo */}
+        <a href="#home" className="flex items-center gap-3 group">
+          {siteSettings.logoUrl ? (
+            <img
+              src={siteSettings.logoUrl}
+              alt={siteSettings.orgName || 'Fresh Perspective Organization'}
+              className="h-10 sm:h-12 w-auto max-w-[190px] object-contain group-hover:opacity-90 transition-opacity"
+            />
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-[#0B132B] text-lime-400 flex items-center justify-center font-black text-base shadow-sm">
+                FP
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-base sm:text-lg text-[#0B132B] tracking-tight uppercase leading-none">
+                  Fresh Perspective
+                </span>
+                <span className="text-[10px] font-bold tracking-wider text-slate-600 uppercase mt-0.5">
+                  Organization
+                </span>
+              </div>
+            </div>
+          )}
         </a>
 
-        {/* Desktop Links */}
-        <nav className="hidden xl:flex items-center gap-5 text-xs font-semibold text-slate-700">
+        {/* Desktop Links - Clear, readable typography */}
+        <nav className="hidden xl:flex items-center gap-6 text-sm font-bold text-slate-800">
           {navLinks.map((item) => (
             <a
               key={item.name}
@@ -90,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
                 e.preventDefault();
                 handleLinkClick(item.href);
               }}
-              className="hover:text-[#0B132B] py-1"
+              className="hover:text-[#0B132B] hover:text-lime-700 py-1 transition-colors"
             >
               {item.name}
             </a>
@@ -101,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
         <div className="hidden sm:flex items-center gap-3">
           <button
             onClick={onRequestQuote}
-            className="bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-bold px-4 py-2 rounded-lg text-xs"
+            className="bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-sm hover:shadow transition-all"
           >
             Request a Quote
           </button>

@@ -17,26 +17,36 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onRequestQuote }) =
 
   return (
     <footer className="bg-[#0B132B] text-slate-300 border-t border-slate-800">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Col 1 */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded bg-lime-400 text-[#0B132B] flex items-center justify-center font-black text-xs">
-                FP
-              </div>
-              <span className="text-base font-extrabold text-white tracking-tight uppercase">
-                Fresh Perspective Organization
-              </span>
+            <div className="flex items-center gap-3 mb-4">
+              {siteSettings.logoUrl ? (
+                <img
+                  src={siteSettings.logoUrl}
+                  alt={siteSettings.orgName || 'Fresh Perspective Organization'}
+                  className="h-10 sm:h-12 w-auto max-w-[200px] object-contain brightness-105"
+                />
+              ) : (
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-lime-400 text-[#0B132B] flex items-center justify-center font-black text-sm">
+                    FP
+                  </div>
+                  <span className="text-lg font-black text-white tracking-tight uppercase">
+                    Fresh Perspective Organization
+                  </span>
+                </div>
+              )}
             </div>
-            <p className="text-xs text-slate-400 mb-5 leading-relaxed max-w-sm">
+            <p className="text-sm sm:text-base text-slate-300 mb-6 leading-relaxed max-w-md font-normal">
               Creative services, corporate consulting, and digital solutions. Timely delivery with valuable works done.
             </p>
 
             {/* Official Social Links */}
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                Official Channels
+              <div className="text-xs font-black uppercase tracking-wider text-lime-400 mb-3">
+                Official Channels & Handles
               </div>
               <div className="flex flex-wrap gap-1.5 text-xs">
                 <a

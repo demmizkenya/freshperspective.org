@@ -17,41 +17,42 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenAdminAdd
     : published.filter((p) => p.category === activeFilter);
 
   return (
-    <section id="projects" className="py-16 md:py-20 bg-slate-50 border-b border-slate-200">
+    <section id="projects" className="py-20 md:py-28 bg-slate-50 border-b border-slate-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-          <div>
-            <div className="inline-block text-xs font-bold uppercase tracking-wider text-lime-800 bg-lime-100 px-3 py-1 rounded mb-3">
-              Portfolio
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
+          <div className="max-w-3xl">
+            <div className="inline-block text-xs sm:text-sm font-black uppercase tracking-wider text-lime-950 bg-lime-200 px-4 py-1.5 rounded-lg mb-3 border border-lime-300">
+              Portfolio & Client Work
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B132B] tracking-tight mb-2">
-              Our Projects
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#0B132B] tracking-tight mb-3">
+              Featured Projects & Solutions
             </h2>
-            <p className="text-sm text-slate-600">
-              Selected client works and technical deployments.
+            <p className="text-lg sm:text-xl text-slate-800 font-semibold leading-relaxed">
+              Delivering measurable value and timely technical execution across diverse industries.
             </p>
           </div>
 
-          {isAdmin && (
+          {/* Admin-only button: HIDDEN from public visitors, only visible to authenticated admin */}
+          {isAdmin && onOpenAdminAddProject && (
             <button
               onClick={onOpenAdminAddProject}
-              className="bg-[#0B132B] hover:bg-slate-800 text-lime-400 font-semibold px-4 py-2 rounded-lg text-xs"
+              className="bg-[#0B132B] hover:bg-slate-800 text-lime-400 font-bold px-4 py-2.5 rounded-xl text-xs inline-flex items-center gap-1.5 shrink-0 shadow-sm transition-all"
             >
-              + Add Project
+              <span>+ Add Project (Admin)</span>
             </button>
           )}
         </div>
 
         {categories.length > 2 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 text-xs">
+          <div className="flex items-center gap-2.5 overflow-x-auto pb-3 mb-8 text-sm">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveFilter(cat)}
-                className={`px-3 py-1.5 rounded-full whitespace-nowrap font-medium transition-colors ${
+                className={`px-4 py-2 rounded-full whitespace-nowrap font-bold transition-all text-sm ${
                   activeFilter === cat
-                    ? 'bg-[#0B132B] text-white font-bold'
-                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                    ? 'bg-[#0B132B] text-white shadow-sm'
+                    : 'bg-white text-slate-800 hover:bg-slate-200 border border-slate-300'
                 }`}
               >
                 {cat}
@@ -61,11 +62,11 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenAdminAdd
         )}
 
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filtered.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:border-lime-400 transition-colors shadow-xs"
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:border-lime-400 hover:shadow-lg transition-all"
               >
                 {item.imageUrl && (
                   <div className="relative aspect-[16/10] bg-slate-100">
@@ -76,35 +77,36 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenAdminAdd
                       loading="lazy"
                     />
                     {item.isFeatured && (
-                      <span className="absolute top-2 right-2 bg-lime-400 text-[#0B132B] text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">
+                      <span className="absolute top-3 right-3 bg-lime-400 text-[#0B132B] text-xs font-black uppercase px-2.5 py-1 rounded-md shadow-xs">
                         Featured
                       </span>
                     )}
                   </div>
                 )}
 
-                <div className="p-5 flex-1 flex flex-col justify-between">
+                <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-lime-700 mb-1 block">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-lime-800 mb-2 block">
                       {item.category}
                     </span>
-                    <h3 className="text-base font-bold text-[#0B132B] mb-2">
+                    <h3 className="text-xl font-black text-[#0B132B] mb-2.5 leading-snug">
                       {item.title}
                     </h3>
-                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-4">
+                    <p className="text-sm sm:text-base text-slate-800 leading-relaxed font-normal mb-5">
                       {item.description}
                     </p>
                   </div>
 
                   {item.projectUrl && (
-                    <div className="pt-3 border-t border-slate-100">
+                    <div className="pt-4 border-t border-slate-100">
                       <a
                         href={item.projectUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-bold text-[#0B132B] hover:text-lime-700"
+                        className="text-sm font-bold text-[#0B132B] hover:text-lime-700 inline-flex items-center gap-1.5 transition-colors"
                       >
-                        View Project →
+                        <span>View Project Details</span>
+                        <span>→</span>
                       </a>
                     </div>
                   )}
@@ -113,10 +115,12 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenAdminAdd
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 p-10 text-center max-w-md mx-auto">
-            <h3 className="text-base font-bold text-[#0B132B] mb-1">Portfolio Awaiting Case Studies</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Verified client case studies will be displayed once published by the administration.
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-xs">
+            <h3 className="text-lg font-black text-[#0B132B] mb-2">
+              Portfolio In Production
+            </h3>
+            <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
+              Verified client case studies and digital deployment showcases will appear here once published by Fresh Perspective Organization.
             </p>
           </div>
         )}

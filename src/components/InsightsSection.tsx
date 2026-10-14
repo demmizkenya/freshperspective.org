@@ -2,48 +2,33 @@ import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Insight } from '../types';
 
-interface InsightsSectionProps {
-  onOpenAdminAddInsight?: () => void;
-}
-
-export const InsightsSection: React.FC<InsightsSectionProps> = ({ onOpenAdminAddInsight }) => {
-  const { insights, isAdmin } = useData();
+export const InsightsSection: React.FC = () => {
+  const { insights } = useData();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
 
   const published = insights.filter((i) => i.isPublished);
 
   return (
-    <section id="insights" className="py-16 md:py-20 bg-white border-b border-slate-200">
+    <section id="insights" className="py-20 md:py-24 bg-white border-b border-slate-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-          <div>
-            <div className="inline-block text-xs font-bold uppercase tracking-wider text-lime-800 bg-lime-100 px-3 py-1 rounded mb-3">
-              Insights
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B132B] tracking-tight mb-2">
-              Articles & Perspectives
-            </h2>
-            <p className="text-sm text-slate-600">
-              Perspectives on digital innovation and strategic growth.
-            </p>
+        <div className="max-w-3xl mb-12">
+          <div className="inline-block text-xs sm:text-sm font-extrabold uppercase tracking-wider text-lime-800 bg-lime-100 px-3.5 py-1.5 rounded-md mb-3">
+            Industry Insights & Articles
           </div>
-
-          {isAdmin && (
-            <button
-              onClick={onOpenAdminAddInsight}
-              className="bg-[#0B132B] hover:bg-slate-800 text-lime-400 font-semibold px-4 py-2 rounded-lg text-xs"
-            >
-              + Write Article
-            </button>
-          )}
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#0B132B] tracking-tight mb-3">
+            Perspectives & Strategies
+          </h2>
+          <p className="text-base sm:text-lg text-slate-800 font-medium leading-relaxed">
+            Practical thought leadership on digital transformation, brand scaling, and creative innovation.
+          </p>
         </div>
 
         {published.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {published.map((item) => (
               <div
                 key={item.id}
-                className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:border-lime-400 transition-colors"
+                className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:border-lime-400 hover:shadow-lg transition-all"
               >
                 <div>
                   {item.imageUrl && (
@@ -57,41 +42,40 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({ onOpenAdminAdd
                     </div>
                   )}
 
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                      <span className="font-bold text-lime-700 uppercase">
-                        {item.category || 'Article'}
-                      </span>
-                      <span>•</span>
-                      <span>{item.publishedDate || 'Recent'}</span>
+                  <div className="p-6">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-2">
+                      <span className="text-lime-800 uppercase tracking-wider">{item.category}</span>
+                      <span>{item.publishedDate}</span>
                     </div>
 
-                    <h3 className="text-base font-bold text-[#0B132B] mb-2 line-clamp-2">
+                    <h3 className="text-xl font-black text-[#0B132B] mb-2 leading-snug">
                       {item.title}
                     </h3>
-
-                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                    <p className="text-sm sm:text-base text-slate-700 line-clamp-3 leading-relaxed mb-4">
                       {item.summary}
                     </p>
                   </div>
                 </div>
 
-                <div className="p-5 pt-0">
+                <div className="p-6 pt-0">
                   <button
                     onClick={() => setSelectedInsight(item)}
-                    className="text-xs font-bold text-[#0B132B] hover:text-lime-700"
+                    className="text-sm font-bold text-[#0B132B] hover:text-lime-700 inline-flex items-center gap-1.5"
                   >
-                    Read Article →
+                    <span>Read Full Article</span>
+                    <span>→</span>
                   </button>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center max-w-md mx-auto">
-            <h3 className="text-base font-bold text-[#0B132B] mb-1">Insights Channel Initializing</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Articles published by Fresh Perspective Organization will be posted here.
+          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-xs">
+            <h3 className="text-lg font-black text-[#0B132B] mb-2">
+              Articles In Preparation
+            </h3>
+            <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
+              Thought leadership analyses and case reflections will be published here.
             </p>
           </div>
         )}
@@ -99,28 +83,27 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({ onOpenAdminAdd
 
       {/* Reader Modal */}
       {selectedInsight && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-xl border border-slate-200 relative">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8 shadow-2xl border border-slate-200 relative">
             <button
               onClick={() => setSelectedInsight(null)}
-              className="absolute top-3 right-3 text-slate-400 hover:text-slate-700 font-bold text-sm"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 font-bold text-lg w-8 h-8 rounded-full flex items-center justify-center"
             >
               ✕
             </button>
 
-            <div className="text-xs text-slate-500 mb-2">
-              <span className="font-bold text-lime-800 uppercase bg-lime-100 px-2 py-0.5 rounded">
-                {selectedInsight.category}
-              </span>
-              <span className="ml-2">{selectedInsight.publishedDate}</span>
-            </div>
-
-            <h2 className="text-xl font-extrabold text-[#0B132B] mb-4">
+            <span className="text-xs font-black uppercase tracking-wider text-lime-800 bg-lime-100 px-3 py-1 rounded-md">
+              {selectedInsight.category}
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-[#0B132B] mt-3 mb-2">
               {selectedInsight.title}
             </h2>
+            <div className="text-xs text-slate-500 font-bold mb-6">
+              Published: {selectedInsight.publishedDate}
+            </div>
 
             {selectedInsight.imageUrl && (
-              <div className="aspect-[16/9] rounded-lg overflow-hidden mb-4 bg-slate-100">
+              <div className="aspect-[16/9] rounded-xl overflow-hidden mb-6 bg-slate-100 border border-slate-200">
                 <img
                   src={selectedInsight.imageUrl}
                   alt={selectedInsight.title}
@@ -129,7 +112,7 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({ onOpenAdminAdd
               </div>
             )}
 
-            <div className="text-xs sm:text-sm leading-relaxed text-slate-700 whitespace-pre-line">
+            <div className="prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed whitespace-pre-line">
               {selectedInsight.content || selectedInsight.summary}
             </div>
           </div>

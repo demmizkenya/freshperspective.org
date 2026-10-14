@@ -230,11 +230,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   );
 
-  // Admin login credentials (as requested by user)
-  const [adminEmail, setAdminEmail] = useState('freshperspectiveorganization@gmail.com');
-  const [adminPassword, setAdminPassword] = useState('fresh@org');
+  // Admin login credentials (securely empty by default - never visible to visitors)
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState<number | null>(null);
+  const [galleryUploadProgress, setGalleryUploadProgress] = useState<number | null>(null);
+  const [isCeoUploading, setIsCeoUploading] = useState(false);
 
   // Sync settings when siteSettings update
   React.useEffect(() => {
@@ -352,6 +355,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <input
                   type="email"
                   required
+                  placeholder="Enter administrator email"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-[#0B132B] font-medium"
@@ -365,6 +369,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <input
                   type="password"
                   required
+                  placeholder="Enter password"
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-[#0B132B] font-medium"
@@ -429,6 +434,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <span>CEO Profile & Photo</span>
                 </div>
                 <span className="text-[10px] font-mono text-lime-400">Executive</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('logo')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === 'logo'
+                    ? 'bg-[#0B132B] text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-200/70'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <ImageIcon className="w-4 h-4 text-lime-400" />
+                  <span>Organization Logo</span>
+                </div>
+                <span className="text-[10px] font-mono text-lime-400">
+                  {siteSettings.logoUrl ? 'Active' : 'Pending'}
+                </span>
               </button>
 
               <button
@@ -666,40 +688,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="flex-1">
                           <input
                             type="file"
-                            accept="image/jpeg,image/png,image/webp"
+                            accept="image/*"
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                setUploadProgress(0);
+                                if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|svg|heic|heif)$/i.test(file.name)) {
+                                  showNotice('error', 'Please select a valid image file from device (JPEG, PNG, WebP, SVG).');
+                                  e.target.value = '';
+                                  return;
+                                }
+                                setIsCeoUploading(true);
+                                setUploadProgress(20);
                                 try {
                                   const res = await uploadImageToStorage(file, 'ceo', (pct) => {
                                     setUploadProgress(pct);
                                   });
-                                  setCeoForm((prev) => ({
-                                    ...prev,
+                                  const updated = {
+                                    ...ceoForm,
                                     photoUrl: res.downloadUrl,
                                     photoPath: res.storagePath,
-                                  }));
+                                  };
+                                  setCeoForm(updated);
+                                  await saveCeoProfile(updated);
                                   setUploadProgress(null);
-                                  showNotice('success', 'Photograph uploaded to Firebase Storage.');
+                                  setIsCeoUploading(false);
+                                  showNotice('success', 'CEO photograph uploaded and saved permanently to Cloud Firestore!');
                                 } catch (err: any) {
-                                  alert(err.message || 'Upload failed');
+                                  showNotice('error', err.message || 'Upload failed. Please try another image.');
                                   setUploadProgress(null);
+                                  setIsCeoUploading(false);
+                                } finally {
+                                  e.target.value = '';
                                 }
                               }
                             }}
-                            className="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#0B132B] file:text-lime-400 hover:file:bg-slate-800"
+                            className="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#0B132B] file:text-lime-400 hover:file:bg-slate-800 cursor-pointer"
                           />
-                          {uploadProgress !== null && (
-                            <div className="mt-2 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                              <div
-                                className="bg-[#84cc16] h-full transition-all"
-                                style={{ width: `${uploadProgress}%` }}
-                              />
+                          {isCeoUploading && (
+                            <div className="mt-2 space-y-1">
+                              <div className="flex justify-between text-[11px] text-slate-600 font-medium">
+                                <span>Processing & uploading photo...</span>
+                                <span>{uploadProgress || 20}%</span>
+                              </div>
+                              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className="bg-[#84cc16] h-full transition-all duration-300"
+                                  style={{ width: `${uploadProgress || 20}%` }}
+                                />
+                              </div>
                             </div>
                           )}
-                          <p className="text-[10px] text-slate-400 mt-1">
-                            Permanent Firebase Storage download URL will be saved in Firestore.
+                          <p className="text-[11px] text-slate-500 mt-1.5">
+                            Select any image from your device gallery. Optimized automatically and saved to Cloud Firestore.
                           </p>
                         </div>
                       </div>
@@ -746,6 +786,160 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {isProcessing ? 'Saving to Firestore...' : 'Save CEO Profile to Firestore'}
                     </button>
                   </form>
+                </div>
+              )}
+
+              {/* TAB: ORGANIZATION LOGO MANAGEMENT */}
+              {activeTab === 'logo' && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-lg font-bold text-[#0B132B]">Organization Logo Management</h3>
+                      <p className="text-xs text-slate-500">
+                        Upload and update the official organization logo stored permanently in Firebase. Displayed dynamically in the header navigation, footer, and brand touchpoints.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 max-w-2xl text-xs bg-slate-50 p-6 rounded-xl border border-slate-200">
+                    {/* Live Preview on Light & Dark Backgrounds */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-2">Live Logo Preview</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Light preview */}
+                        <div className="bg-white p-5 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center min-h-[140px]">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            Header Navigation Preview (White Background)
+                          </span>
+                          {siteSettings.logoUrl ? (
+                            <img
+                              src={siteSettings.logoUrl}
+                              alt="Organization Logo"
+                              className="max-h-14 w-auto object-contain"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="w-9 h-9 rounded-lg bg-[#0B132B] text-lime-400 flex items-center justify-center font-black text-sm">
+                                FP
+                              </div>
+                              <span className="font-extrabold text-sm text-[#0B132B] tracking-tight uppercase">
+                                Fresh Perspective
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Dark preview */}
+                        <div className="bg-[#0B132B] p-5 rounded-xl border border-slate-800 flex flex-col items-center justify-center text-center min-h-[140px]">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            Footer Preview (Navy Background)
+                          </span>
+                          {siteSettings.logoUrl ? (
+                            <img
+                              src={siteSettings.logoUrl}
+                              alt="Organization Logo"
+                              className="max-h-14 w-auto object-contain brightness-105"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded bg-lime-400 text-[#0B132B] flex items-center justify-center font-black text-xs">
+                                FP
+                              </div>
+                              <span className="font-extrabold text-sm text-white tracking-tight uppercase">
+                                Fresh Perspective Organization
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upload controls */}
+                    <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-4">
+                      <div>
+                        <label className="block font-bold text-slate-800 mb-1">
+                          Upload / Replace Organization Logo
+                        </label>
+                        <p className="text-[11px] text-slate-500 mb-3">
+                          Select your logo (PNG with transparent background, SVG, or high-resolution JPEG). The logo will be permanently saved to Firebase Storage and synchronized across the website.
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/*,.svg"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|svg|heic|heif)$/i.test(file.name)) {
+                                showNotice('error', 'Please select a valid image file (PNG, SVG, JPEG, WebP).');
+                                e.target.value = '';
+                                return;
+                              }
+                              setLogoUploadProgress(20);
+                              try {
+                                const res = await uploadImageToStorage(file, 'branding', (pct) => {
+                                  setLogoUploadProgress(pct);
+                                });
+                                await updateSiteSettings({
+                                  logoUrl: res.downloadUrl,
+                                  logoPath: res.storagePath,
+                                });
+                                setLogoUploadProgress(null);
+                                showNotice('success', 'Official organization logo uploaded and saved permanently to Cloud Firestore!');
+                              } catch (err: any) {
+                                showNotice('error', err.message || 'Logo upload failed. Please try another file.');
+                                setLogoUploadProgress(null);
+                              } finally {
+                                e.target.value = '';
+                              }
+                            }
+                          }}
+                          className="text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#0B132B] file:text-lime-400 hover:file:bg-slate-800 cursor-pointer"
+                        />
+                        {logoUploadProgress !== null && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex justify-between text-[11px] text-slate-600 font-medium">
+                              <span>Uploading organization logo...</span>
+                              <span>{logoUploadProgress}%</span>
+                            </div>
+                            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                              <div
+                                className="bg-[#84cc16] h-full transition-all duration-300"
+                                style={{ width: `${logoUploadProgress}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {siteSettings.logoUrl && (
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-xs text-emerald-700 font-semibold flex items-center gap-1.5">
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Active Logo Configured in Firestore</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (window.confirm('Reset to default Fresh Perspective Organization monogram?')) {
+                                try {
+                                  await updateSiteSettings({
+                                    logoUrl: '',
+                                    logoPath: '',
+                                  });
+                                  showNotice('success', 'Logo reset to default brand monogram.');
+                                } catch (err: any) {
+                                  showNotice('error', err.message || 'Reset failed');
+                                }
+                              }
+                            }}
+                            className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            Remove Logo & Reset to Default
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -2051,7 +2245,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             }));
                             setUploadProgress(null);
                           } catch (err: any) {
-                            alert(err.message || 'Upload failed');
+                            showNotice('error', err.message || 'Upload failed');
                             setUploadProgress(null);
                           }
                         }
@@ -2344,22 +2538,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {galleryModalOpen && (
         <div className="fixed inset-0 z-60 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 text-xs">
-            <h3 className="font-bold text-[#0B132B] text-base mb-4">Upload Gallery Image</h3>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
+              <h3 className="font-bold text-[#0B132B] text-base">Upload Gallery Photograph</h3>
+              <button
+                onClick={() => {
+                  setGalleryModalOpen(false);
+                  setGalleryUploadProgress(null);
+                }}
+                className="text-slate-400 hover:text-slate-700 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (!editingGallery.imageUrl) {
-                  alert('Please upload an image file first.');
+                  showNotice('error', 'Please select an image file first.');
                   return;
                 }
-                await saveGalleryItem(editingGallery);
-                setGalleryModalOpen(false);
-                showNotice('success', 'Image added to Gallery.');
+                setIsProcessing(true);
+                try {
+                  await saveGalleryItem({
+                    ...editingGallery,
+                    isPublished: true,
+                    order: galleryItems.length + 1,
+                  });
+                  setGalleryModalOpen(false);
+                  setGalleryUploadProgress(null);
+                  showNotice('success', 'Photograph successfully added to Agency Gallery!');
+                } catch (err: any) {
+                  showNotice('error', err.message || 'Failed to save gallery item.');
+                } finally {
+                  setIsProcessing(false);
+                }
               }}
-              className="space-y-3"
+              className="space-y-4"
             >
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Select Photograph *</label>
+                <label className="block font-bold text-slate-800 mb-1">Select Photograph *</label>
+                {editingGallery.imageUrl ? (
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200 mb-2">
+                    <img
+                      src={editingGallery.imageUrl}
+                      alt="Gallery Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute bottom-2 left-2 bg-[#0B132B]/80 text-lime-400 text-[10px] font-bold px-2 py-0.5 rounded">
+                      Ready to Publish
+                    </span>
+                  </div>
+                ) : null}
+
                 <input
                   type="file"
                   required={!editingGallery.imageUrl}
@@ -2367,46 +2598,93 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onChange={async (e) => {
                     const f = e.target.files?.[0];
                     if (f) {
-                      const res = await uploadImageToStorage(f, 'gallery');
-                      setEditingGallery((g) => ({ ...g, imageUrl: res.downloadUrl, imagePath: res.storagePath }));
+                      if (!f.type.startsWith('image/') && !/\.(jpe?g|png|webp|svg|heic|heif)$/i.test(f.name)) {
+                        showNotice('error', 'Please select a valid image file from device (JPEG, PNG, WebP).');
+                        e.target.value = '';
+                        return;
+                      }
+                      setGalleryUploadProgress(20);
+                      try {
+                        const res = await uploadImageToStorage(f, 'gallery', (pct) => {
+                          setGalleryUploadProgress(pct);
+                        });
+                        setEditingGallery((g) => ({
+                          ...g,
+                          imageUrl: res.downloadUrl,
+                          imagePath: res.storagePath,
+                          title: g.title || f.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+                        }));
+                        setGalleryUploadProgress(null);
+                        showNotice('success', 'Photograph processed and ready for permanent gallery publishing.');
+                      } catch (uploadErr: any) {
+                        showNotice('error', uploadErr.message || 'Image processing failed. Please try another file.');
+                        setGalleryUploadProgress(null);
+                      } finally {
+                        e.target.value = '';
+                      }
                     }
                   }}
-                  className="text-xs"
+                  className="w-full text-xs file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#0B132B] file:text-lime-400 hover:file:bg-slate-800 cursor-pointer"
                 />
+
+                {galleryUploadProgress !== null && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex justify-between text-[11px] text-slate-600 font-medium">
+                      <span>Processing image...</span>
+                      <span>{galleryUploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-[#84cc16] h-full transition-all duration-300"
+                        style={{ width: `${galleryUploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Select any photo from your device gallery. Optimized for web delivery.
+                </p>
               </div>
+
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Title / Caption</label>
                 <input
                   type="text"
                   value={editingGallery.title || ''}
                   onChange={(e) => setEditingGallery({ ...editingGallery, title: e.target.value })}
-                  placeholder="e.g. Strategy workshop session"
-                  className="w-full border rounded p-2"
+                  placeholder="e.g. Creative team strategy session"
+                  className="w-full border rounded-lg p-2.5 text-xs text-[#0B132B]"
                 />
               </div>
+
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Category</label>
                 <input
                   type="text"
-                  value={editingGallery.category || ''}
+                  value={editingGallery.category || 'Creative Production'}
                   onChange={(e) => setEditingGallery({ ...editingGallery, category: e.target.value })}
-                  placeholder="e.g. Studio, Events, Workshop"
-                  className="w-full border rounded p-2"
+                  placeholder="e.g. Studio, Events, Workshop, Creative Production"
+                  className="w-full border rounded-lg p-2.5 text-xs text-[#0B132B]"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setGalleryModalOpen(false)}
-                  className="px-3 py-1.5 border rounded font-semibold text-slate-700"
+                  onClick={() => {
+                    setGalleryModalOpen(false);
+                    setGalleryUploadProgress(null);
+                  }}
+                  className="px-4 py-2 border rounded-lg font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-bold px-4 py-1.5 rounded"
+                  disabled={isProcessing || galleryUploadProgress !== null}
+                  className="bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-bold px-5 py-2 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  Confirm Upload
+                  {isProcessing ? 'Saving to Firestore...' : 'Publish to Gallery'}
                 </button>
               </div>
             </form>

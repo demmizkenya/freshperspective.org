@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 
-interface FaqsSectionProps {
-  onOpenAdminAddFaq?: () => void;
-}
-
-export const FaqsSection: React.FC<FaqsSectionProps> = ({ onOpenAdminAddFaq }) => {
-  const { faqs, isAdmin } = useData();
+export const FaqsSection: React.FC = () => {
+  const { faqs } = useData();
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const published = faqs.filter((f) => f.isPublished);
@@ -16,43 +12,43 @@ export const FaqsSection: React.FC<FaqsSectionProps> = ({ onOpenAdminAddFaq }) =
   };
 
   return (
-    <section id="faqs" className="py-16 md:py-20 bg-slate-50 border-b border-slate-200">
+    <section id="faqs" className="py-20 md:py-24 bg-slate-50 border-b border-slate-200">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-xl mx-auto mb-10">
-          <div className="inline-block text-xs font-bold uppercase tracking-wider text-lime-800 bg-lime-100 px-3 py-1 rounded mb-3">
-            FAQs
+        <div className="text-center max-w-2xl mx-auto mb-14">
+          <div className="inline-block text-xs sm:text-sm font-black uppercase tracking-wider text-lime-950 bg-lime-200 px-4 py-1.5 rounded-lg mb-3 border border-lime-300">
+            Inquiries & Clarifications
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B132B] tracking-tight mb-2">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#0B132B] tracking-tight mb-3">
             Frequently Asked Questions
           </h2>
-          <p className="text-sm text-slate-600">
-            Answers regarding our engagement models and delivery timelines.
+          <p className="text-lg sm:text-xl text-slate-800 font-semibold leading-relaxed">
+            Direct answers regarding our project engagement models, delivery timelines, and quality assurances.
           </p>
         </div>
 
         {published.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {published.map((faq, idx) => {
               const isOpen = openIndex === idx;
               return (
                 <div
                   key={faq.id || idx}
-                  className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs"
+                  className="bg-white rounded-2xl border border-slate-300 overflow-hidden shadow-xs hover:border-lime-400 transition-all"
                 >
                   <button
                     onClick={() => toggleAccordion(idx)}
-                    className="w-full py-4 px-5 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors"
+                    className="w-full py-5 px-6 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors"
                   >
-                    <span className="font-bold text-sm text-[#0B132B]">
+                    <span className="font-black text-lg sm:text-xl text-[#0B132B]">
                       {faq.question}
                     </span>
-                    <span className="font-mono text-sm text-slate-500 font-bold">
+                    <span className="font-mono text-xl text-slate-900 font-black">
                       {isOpen ? '−' : '+'}
                     </span>
                   </button>
 
                   {isOpen && (
-                    <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100">
+                    <div className="px-6 pb-6 pt-2 text-base sm:text-lg text-slate-800 leading-relaxed border-t border-slate-200 font-medium">
                       {faq.answer}
                     </div>
                   )}
@@ -61,22 +57,13 @@ export const FaqsSection: React.FC<FaqsSectionProps> = ({ onOpenAdminAddFaq }) =
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-            <h3 className="text-base font-bold text-[#0B132B] mb-1">No FAQs Published</h3>
-            <p className="text-xs text-slate-500">
-              Questions and answers will be available once configured by the admin.
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto shadow-xs">
+            <h3 className="text-lg font-black text-[#0B132B] mb-2">
+              FAQs Being Updated
+            </h3>
+            <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
+              Standard client inquiries and policy answers will appear here once published.
             </p>
-          </div>
-        )}
-
-        {isAdmin && (
-          <div className="mt-6 text-center">
-            <button
-              onClick={onOpenAdminAddFaq}
-              className="bg-[#0B132B] hover:bg-slate-800 text-lime-400 font-semibold px-4 py-2 rounded-lg text-xs"
-            >
-              Manage FAQs
-            </button>
           </div>
         )}
       </div>

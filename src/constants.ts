@@ -37,6 +37,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   phone: '+234 903 186 0768',
   whatsappUrl: 'https://wa.me/2349031860768',
   socialLinks: DEFAULT_SOCIAL_LINKS,
+  logoUrl: '',
+  logoPath: '',
   ceoProfile: {
     fullName: '',
     title: 'Chief Executive Officer',

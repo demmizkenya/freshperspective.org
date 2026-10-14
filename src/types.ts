@@ -34,6 +34,8 @@ export interface SiteSettings {
   whatsappUrl: string;
   socialLinks: SocialLinks;
   ceoProfile?: CeoProfile;
+  logoUrl?: string;
+  logoPath?: string;
   updatedAt?: string;
 }
 
