@@ -116,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
         <div className="hidden sm:flex items-center gap-3">
           <button
             onClick={onRequestQuote}
-            className="bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-sm hover:shadow transition-all animate-quote-pulse"
+            className="bg-[#74C01E] hover:bg-[#65A30D] text-[#0B132B] font-extrabold px-5 py-2.5 rounded-xl text-sm shadow-sm hover:shadow transition-all animate-quote-pulse"
           >
             Request a Quote
           </button>
@@ -126,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
         <div className="flex xl:hidden items-center gap-2">
           <button
             onClick={onRequestQuote}
-            className="text-xs font-bold bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] px-3 py-1.5 rounded transition-all animate-quote-pulse"
+            className="text-xs font-black bg-[#74C01E] hover:bg-[#65A30D] text-[#0B132B] px-3.5 py-1.5 rounded-md transition-all animate-quote-pulse tracking-tight"
           >
             Quote
           </button>
@@ -163,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
                 setMobileMenuOpen(false);
                 onRequestQuote();
               }}
-              className="w-full bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] font-bold py-2.5 rounded-xl text-xs transition-all animate-quote-pulse"
+              className="w-full bg-[#74C01E] hover:bg-[#65A30D] text-[#0B132B] font-extrabold py-3 rounded-xl text-xs transition-all animate-quote-pulse"
             >
               Request a Quote
             </button>

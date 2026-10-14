@@ -32,13 +32,13 @@ export const Hero: React.FC<HeroProps> = ({ onRequestQuote, onExploreServices })
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
           <button
             onClick={onRequestQuote}
-            className="w-full sm:w-auto bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] font-black px-9 py-4 rounded-xl text-base sm:text-lg shadow-md hover:shadow-lg transition-all animate-quote-pulse"
+            className="w-full sm:w-auto bg-[#74C01E] hover:bg-[#65A30D] text-[#0B132B] font-extrabold px-9 py-4 rounded-xl text-base sm:text-lg shadow-md hover:shadow-lg transition-all animate-quote-pulse"
           >
             Request a Quote
           </button>
           <button
             onClick={onExploreServices}
-            className="w-full sm:w-auto bg-[#0B132B] hover:bg-slate-800 text-white font-extrabold px-9 py-4 rounded-xl text-base sm:text-lg transition-all border-2 border-slate-700 hover:border-slate-600"
+            className="w-full sm:w-auto bg-[#0B132B] hover:bg-slate-800 text-white font-extrabold px-9 py-4 rounded-xl text-base sm:text-lg transition-all border-2 border-[#0B132B] hover:border-slate-700 shadow-md"
           >
             Explore Our Services
           </button>

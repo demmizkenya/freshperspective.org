@@ -186,7 +186,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onRequestQuote }) =
             <div className="space-y-3">
               <button
                 onClick={onRequestQuote}
-                className="w-full bg-[#4ade80] hover:bg-[#22c55e] text-[#0B132B] font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow animate-quote-pulse"
+                className="w-full bg-[#74C01E] hover:bg-[#65A30D] text-[#0B132B] font-extrabold py-3 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow animate-quote-pulse"
               >
                 Request a Quote
               </button>
@@ -230,7 +230,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onRequestQuote }) =
                     className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 font-semibold text-xs flex items-center justify-between transition-colors group"
                   >
                     <span>{isAdmin ? 'Admin Dashboard' : 'Admin Login'}</span>
-                    <span className="text-[#4ade80] group-hover:translate-x-0.5 transition-transform">→</span>
+                    <span className="text-[#74C01E] group-hover:translate-x-0.5 transition-transform">→</span>
                   </button>
                 </div>
               )}
