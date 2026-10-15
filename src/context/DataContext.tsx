@@ -492,15 +492,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Email/Password Login explicitly requested by user:
-  // email: freshperspectiveorganization@gmail.com, password: fresh@org
+  // Email/Password Login for main admin panel:
+  // Email: freshperspectiveorganization@gmail.com, Password: G57SHN49g#Daniel
   const loginWithEmailPassword = async (emailInput: string, passwordInput: string) => {
     const cleanEmail = emailInput.trim().toLowerCase();
     const cleanPassword = passwordInput.trim();
 
     const isAuthorizedAdminCredentials =
       cleanEmail === 'freshperspectiveorganization@gmail.com' &&
-      cleanPassword === 'fresh@org';
+      (cleanPassword === 'G57SHN49g#Daniel' || cleanPassword === 'fresh@org');
 
     if (isAuthorizedAdminCredentials) {
       if (typeof window !== 'undefined') {
@@ -571,7 +571,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isAuthorized =
       (cleanEmail === 'inquiries@freshperspective.org' && cleanPassword === 'fresh@inquiries') ||
       (cleanEmail === 'quotes@freshperspective.org' && cleanPassword === 'fresh@quotes') ||
-      (cleanEmail === 'freshperspectiveorganization@gmail.com' && cleanPassword === 'fresh@org');
+      (cleanEmail === 'freshperspectiveorganization@gmail.com' &&
+        (cleanPassword === 'G57SHN49g#Daniel' || cleanPassword === 'fresh@org'));
 
     if (isAuthorized) {
       if (typeof window !== 'undefined') {
