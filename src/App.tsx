@@ -16,11 +16,13 @@ import { FaqsSection } from './components/FaqsSection';
 import { ContactAndQuoteSection } from './components/ContactAndQuoteSection';
 import { Footer } from './components/Footer';
 import { AdminDashboard } from './components/AdminDashboard';
+import { InquiriesAdminDashboard } from './components/InquiriesAdminDashboard';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 
 export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminTab, setAdminTab] = useState('inquiries');
+  const [isInquiriesAdminOpen, setIsInquiriesAdminOpen] = useState(false);
+  const [adminTab, setAdminTab] = useState('general');
   const [selectedQuoteService, setSelectedQuoteService] = useState('Graphic Design');
 
   const scrollToQuote = (serviceName?: string) => {
@@ -50,7 +52,6 @@ export default function App() {
       <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-lime-200 selection:text-[#0B132B]">
         {/* Navigation Bar */}
         <Navbar
-          onOpenAdmin={() => handleOpenAdminWithTab('inquiries')}
           onRequestQuote={() => scrollToQuote()}
         />
 
@@ -108,18 +109,25 @@ export default function App() {
 
         {/* Footer */}
         <Footer
-          onOpenAdmin={() => handleOpenAdminWithTab('inquiries')}
+          onOpenAdmin={() => handleOpenAdminWithTab('general')}
+          onOpenInquiriesAdmin={() => setIsInquiriesAdminOpen(true)}
           onRequestQuote={() => scrollToQuote()}
         />
 
         {/* Floating WhatsApp Quick Action (Bottom-Left with Pulse Animation) */}
         <FloatingWhatsApp />
 
-        {/* Administrator Portal Modal */}
+        {/* Main Website Content Administrator Portal Modal */}
         <AdminDashboard
           isOpen={isAdminOpen}
           onClose={() => setIsAdminOpen(false)}
           defaultTab={adminTab}
+        />
+
+        {/* Independent Dedicated Inquiries & Quotes Admin Panel */}
+        <InquiriesAdminDashboard
+          isOpen={isInquiriesAdminOpen}
+          onClose={() => setIsInquiriesAdminOpen(false)}
         />
       </div>
     </DataProvider>

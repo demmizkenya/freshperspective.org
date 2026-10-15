@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 
 interface NavbarProps {
-  onOpenAdmin: () => void;
+  onOpenAdmin?: () => void;
   onRequestQuote: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) => {
-  const { siteSettings, isAdmin } = useData();
+export const Navbar: React.FC<NavbarProps> = ({ onRequestQuote }) => {
+  const { siteSettings } = useData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -59,12 +59,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
           >
             +234 903 186 0768
           </a>
-          <button
-            onClick={onOpenAdmin}
-            className="bg-slate-800 hover:bg-slate-700 text-lime-400 px-2 py-0.5 rounded font-mono"
-          >
-            {isAdmin ? 'Admin Active' : 'Admin Login'}
-          </button>
         </div>
       </div>
 
@@ -167,17 +161,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdmin, onRequestQuote }) =
             >
               Request a Quote
             </button>
-            {isAdmin && (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAdmin();
-                }}
-                className="w-full bg-slate-100 text-slate-800 font-semibold py-1.5 rounded text-xs"
-              >
-                Admin Portal (Logged In)
-              </button>
-            )}
           </div>
         </div>
       )}

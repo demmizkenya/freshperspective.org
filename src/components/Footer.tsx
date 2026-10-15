@@ -3,11 +3,16 @@ import { useData } from '../context/DataContext';
 
 interface FooterProps {
   onOpenAdmin: () => void;
+  onOpenInquiriesAdmin: () => void;
   onRequestQuote: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onRequestQuote }) => {
-  const { siteSettings, isAdmin } = useData();
+export const Footer: React.FC<FooterProps> = ({
+  onOpenAdmin,
+  onOpenInquiriesAdmin,
+  onRequestQuote,
+}) => {
+  const { siteSettings, isAdmin, isInquiriesAdmin } = useData();
   const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false);
   const adminDropdownRef = useRef<HTMLDivElement>(null);
   const currentYear = new Date().getFullYear();
@@ -217,19 +222,50 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onRequestQuote }) =
               </button>
 
               {isAdminDropdownOpen && (
-                <div className="absolute right-0 bottom-full mb-2 w-48 bg-[#0B132B] border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 text-xs">
-                  <div className="px-2 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-800 mb-1">
-                    Authorized Access
+                <div className="absolute right-0 bottom-full mb-2 w-56 bg-[#0B132B] border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 text-xs">
+                  <div className="px-2.5 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase border-b border-slate-800 mb-1">
+                    Staff & Portal Access
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAdminDropdownOpen(false);
+                      onOpenInquiriesAdmin();
+                    }}
+                    className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-800/80 text-slate-200 font-semibold text-xs flex items-center justify-between transition-colors group mb-1"
+                  >
+                    <div>
+                      <div className="text-white font-bold text-xs flex items-center gap-1.5">
+                        <span>Inquiries & Quotes</span>
+                        {isInquiriesAdmin && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-lime-400" title="Active"></span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-normal">
+                        {isInquiriesAdmin ? 'Portal Active (Manage Quotes)' : 'Client Inquiries Manager'}
+                      </div>
+                    </div>
+                    <span className="text-[#74C01E] group-hover:translate-x-0.5 transition-transform">→</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
                       setIsAdminDropdownOpen(false);
                       onOpenAdmin();
                     }}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-200 font-semibold text-xs flex items-center justify-between transition-colors group"
+                    className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-800/80 text-slate-200 font-semibold text-xs flex items-center justify-between transition-colors group"
                   >
-                    <span>{isAdmin ? 'Admin Dashboard' : 'Admin Login'}</span>
+                    <div>
+                      <div className="text-white font-bold text-xs flex items-center gap-1.5">
+                        <span>Website Content</span>
+                        {isAdmin && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-lime-400" title="Active"></span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-normal">
+                        {isAdmin ? 'Main Admin Active' : 'CMS & Site Administration'}
+                      </div>
+                    </div>
                     <span className="text-[#74C01E] group-hover:translate-x-0.5 transition-transform">→</span>
                   </button>
                 </div>

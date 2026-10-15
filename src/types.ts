@@ -174,6 +174,8 @@ export interface FAQ {
   updatedAt?: string;
 }
 
+export type InquiryStatus = 'new' | 'in_progress' | 'responded' | 'completed' | 'reviewed' | 'contacted';
+
 export interface Inquiry {
   id?: string;
   fullName: string;
@@ -184,6 +186,8 @@ export interface Inquiry {
   description: string;
   budgetRange?: string;
   preferredDeadline?: string;
-  status: 'new' | 'reviewed' | 'contacted' | 'completed';
+  status: InquiryStatus;
+  internalNotes?: string;
   createdAt: string;
+  updatedAt?: string;
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import {
   collection,
   doc,
@@ -93,7 +93,12 @@ interface DataContextType {
 
   // Inquiries for Admin
   inquiries: Inquiry[];
+  isInquiriesAdmin: boolean;
+  inquiriesAdminEmail: string | null;
+  loginInquiriesAdmin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logoutInquiriesAdmin: () => Promise<void>;
   fetchInquiries: () => Promise<void>;
+  updateInquiry: (id: string, updates: Partial<Inquiry>) => Promise<void>;
   updateInquiryStatus: (id: string, status: Inquiry['status']) => Promise<void>;
   deleteInquiry: (id: string) => Promise<void>;
 
@@ -127,7 +132,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return false;
   });
+  const [isInquiriesAdmin, setIsInquiriesAdmin] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return (
+        sessionStorage.getItem('fp_inquiries_admin_session') === 'true' ||
+        sessionStorage.getItem('fp_admin_session') === 'true'
+      );
+    }
+    return false;
+  });
+  const [inquiriesAdminEmail, setInquiriesAdminEmail] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return (
+        sessionStorage.getItem('fp_inquiries_admin_email') ||
+        (sessionStorage.getItem('fp_admin_session') === 'true' ? 'admin@freshperspective.org' : null)
+      );
+    }
+    return null;
+  });
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const recentSubmissionsRef = useRef<Map<string, number>>(new Map());
 
   // Monitor Auth state
   useEffect(() => {
@@ -349,9 +373,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Fetch inquiries when admin is logged in
+  // Fetch inquiries when any admin is logged in
   const fetchInquiries = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isInquiriesAdmin) return;
     try {
       const q = query(collection(db, 'inquiries'), orderBy('createdAt', 'desc'));
       const snap = await getDocs(q);
@@ -365,13 +389,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Real-time synchronization of inquiries for authorized admins
   useEffect(() => {
-    if (isAdmin) {
-      fetchInquiries();
+    if (!isAdmin && !isInquiriesAdmin) {
+      return;
     }
-  }, [isAdmin]);
 
-  // Submit Inquiry (Public)
+    fetchInquiries();
+
+    try {
+      const q = query(collection(db, 'inquiries'), orderBy('createdAt', 'desc'));
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          const list: Inquiry[] = [];
+          snap.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as Inquiry);
+          });
+          setInquiries(list);
+        },
+        (err) => {
+          console.warn('Real-time inquiries listener note:', err.message);
+        }
+      );
+      return () => unsub();
+    } catch (e) {
+      console.warn('Could not attach real-time inquiry listener:', e);
+    }
+  }, [isAdmin, isInquiriesAdmin]);
+
+  // Submit Inquiry (Public) with duplicate submission prevention
   const submitInquiry = async (
     data: Omit<Inquiry, 'id' | 'createdAt' | 'status'>
   ): Promise<{ success: boolean; error?: string }> => {
@@ -391,12 +438,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: 'Please provide a brief description of your project.' };
       }
 
+      // Prevent duplicate rapid submissions (double-clicks or rapid resubmissions within 20s)
+      const cleanEmail = data.email.trim().toLowerCase();
+      const cleanService = data.service.trim();
+      const submissionKey = `${cleanEmail}_${cleanService}_${data.description.trim().slice(0, 30)}`;
+      const now = Date.now();
+      const lastSent = recentSubmissionsRef.current.get(submissionKey);
+      if (lastSent && now - lastSent < 20000) {
+        return { success: true };
+      }
+      recentSubmissionsRef.current.set(submissionKey, now);
+
       const newInquiry = {
         fullName: data.fullName.trim(),
-        email: data.email.trim().toLowerCase(),
+        email: cleanEmail,
         phone: data.phone?.trim() || '',
         organization: data.organization?.trim() || '',
-        service: data.service.trim(),
+        service: cleanService,
         description: data.description.trim(),
         budgetRange: data.budgetRange?.trim() || '',
         preferredDeadline: data.preferredDeadline?.trim() || '',
@@ -483,7 +541,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Logout
+  // Logout Main Admin
   const logoutUser = async () => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('fp_admin_session');
@@ -495,6 +553,63 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsAdmin(false);
     setCurrentUser(null);
+  };
+
+  // Dedicated Inquiries and Quotes Administrator Login
+  const loginInquiriesAdmin = async (
+    emailInput: string,
+    passwordInput: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = emailInput.trim().toLowerCase();
+    const cleanPassword = passwordInput.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      return { success: false, error: 'Please enter both your email address and password.' };
+    }
+
+    // 1. Check dedicated Inquiry Admin credentials or super-admin credentials
+    const isAuthorized =
+      (cleanEmail === 'inquiries@freshperspective.org' && cleanPassword === 'fresh@inquiries') ||
+      (cleanEmail === 'quotes@freshperspective.org' && cleanPassword === 'fresh@quotes') ||
+      (cleanEmail === 'freshperspectiveorganization@gmail.com' && cleanPassword === 'fresh@org');
+
+    if (isAuthorized) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('fp_inquiries_admin_session', 'true');
+        sessionStorage.setItem('fp_inquiries_admin_email', cleanEmail);
+      }
+      setIsInquiriesAdmin(true);
+      setInquiriesAdminEmail(cleanEmail);
+      await fetchInquiries();
+      return { success: true };
+    }
+
+    // 2. Or verify with Firebase Auth
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('fp_inquiries_admin_session', 'true');
+        sessionStorage.setItem('fp_inquiries_admin_email', userCred.user.email || cleanEmail);
+      }
+      setIsInquiriesAdmin(true);
+      setInquiriesAdminEmail(userCred.user.email || cleanEmail);
+      await fetchInquiries();
+      return { success: true };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || 'Invalid Inquiries & Quotes administrator credentials.',
+      };
+    }
+  };
+
+  const logoutInquiriesAdmin = async () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('fp_inquiries_admin_session');
+      sessionStorage.removeItem('fp_inquiries_admin_email');
+    }
+    setIsInquiriesAdmin(false);
+    setInquiriesAdminEmail(null);
   };
 
   // Admin CRUD operations - Rock-solid persistence treating latest successfully saved content as authoritative
@@ -517,18 +632,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const merged: SiteSettings = {
         ...DEFAULT_SITE_SETTINGS,
         ...serverData,
-        ...siteSettings,
         ...settings,
         ceoProfile: {
           ...DEFAULT_SITE_SETTINGS.ceoProfile,
           ...(serverData.ceoProfile || {}),
-          ...(siteSettings.ceoProfile || {}),
           ...(settings.ceoProfile || {}),
         },
         socialLinks: {
           ...DEFAULT_SITE_SETTINGS.socialLinks,
           ...(serverData.socialLinks || {}),
-          ...(siteSettings.socialLinks || {}),
           ...(settings.socialLinks || {}),
         },
         updatedAt: now,
@@ -912,14 +1024,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateInquiryStatus = async (id: string, status: Inquiry['status']) => {
+  const updateInquiry = async (id: string, updates: Partial<Inquiry>) => {
     try {
-      await updateDoc(doc(db, 'inquiries', id), { status });
-      setInquiries((prev) => prev.map((inq) => (inq.id === id ? { ...inq, status } : inq)));
+      const dataToSave = {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+      await updateDoc(doc(db, 'inquiries', id), dataToSave);
+      setInquiries((prev) =>
+        prev.map((inq) => (inq.id === id ? ({ ...inq, ...dataToSave } as Inquiry) : inq))
+      );
     } catch (err: any) {
       handleFirestoreError(err, OperationType.UPDATE, `inquiries/${id}`);
       throw err;
     }
+  };
+
+  const updateInquiryStatus = async (id: string, status: Inquiry['status']) => {
+    return updateInquiry(id, { status });
   };
 
   const deleteInquiry = async (id: string) => {
@@ -1035,7 +1157,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         saveFAQ,
         deleteFAQ,
         inquiries,
+        isInquiriesAdmin,
+        inquiriesAdminEmail,
+        loginInquiriesAdmin,
+        logoutInquiriesAdmin,
         fetchInquiries,
+        updateInquiry,
         updateInquiryStatus,
         deleteInquiry,
         seedBaselineData,
