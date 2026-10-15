@@ -64,29 +64,27 @@ export const Navbar: React.FC<NavbarProps> = ({ onRequestQuote }) => {
 
       {/* Main navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-        {/* Brand with Dynamic Organization Logo */}
-        <a href="#home" className="flex items-center gap-3 group">
+        {/* Brand with Dynamic Organization Logo and Name */}
+        <a href="#home" className="flex items-center gap-2.5 sm:gap-3 group">
           {siteSettings.logoUrl ? (
             <img
               src={siteSettings.logoUrl}
               alt={siteSettings.orgName || 'Fresh Perspective Organization'}
-              className="h-10 sm:h-12 w-auto max-w-[190px] object-contain group-hover:opacity-90 transition-opacity"
+              className="h-10 sm:h-12 w-auto max-w-[140px] sm:max-w-[190px] object-contain group-hover:opacity-90 transition-opacity"
             />
           ) : (
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-[#0B132B] text-lime-400 flex items-center justify-center font-black text-base shadow-sm">
-                FP
-              </div>
-              <div className="flex flex-col">
-                <span className="font-black text-base sm:text-lg text-[#0B132B] tracking-tight uppercase leading-none">
-                  Fresh Perspective
-                </span>
-                <span className="text-[10px] font-bold tracking-wider text-slate-600 uppercase mt-0.5">
-                  Organization
-                </span>
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-[#0B132B] text-lime-400 flex items-center justify-center font-black text-base shadow-sm shrink-0">
+              FP
             </div>
           )}
+          <div className="flex flex-col">
+            <span className="font-black text-sm sm:text-base md:text-lg text-[#0B132B] tracking-tight uppercase leading-none">
+              Fresh Perspective
+            </span>
+            <span className="text-[9px] sm:text-[10px] font-bold tracking-wider text-slate-600 uppercase mt-0.5">
+              Organization
+            </span>
+          </div>
         </a>
 
         {/* Desktop Links - Clear, readable typography */}
