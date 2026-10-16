@@ -201,6 +201,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
+  // Revalidate authentication session on browser navigation / pageshow (bfcache & popstate)
+  useEffect(() => {
+    const revalidateSessions = () => {
+      if (typeof window === 'undefined') return;
+      const hasAdmin = sessionStorage.getItem('fp_admin_session') === 'true';
+      const hasInquiries = sessionStorage.getItem('fp_inquiries_admin_session') === 'true';
+
+      if (!hasAdmin && !auth.currentUser) {
+        setIsAdmin(false);
+      }
+      if (!hasInquiries && !hasAdmin && !auth.currentUser) {
+        setIsInquiriesAdmin(false);
+        setInquiriesAdminEmail(null);
+      }
+    };
+
+    window.addEventListener('pageshow', revalidateSessions);
+    window.addEventListener('popstate', revalidateSessions);
+    return () => {
+      window.removeEventListener('pageshow', revalidateSessions);
+      window.removeEventListener('popstate', revalidateSessions);
+    };
+  }, []);
+
   // Listen to Firestore real-time collections for public data
   useEffect(() => {
     let unsubs: (() => void)[] = [];
@@ -541,10 +565,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Logout Main Admin
+  // Logout Main Admin - Securely terminate session and purge all credentials
   const logoutUser = async () => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('fp_admin_session');
+      sessionStorage.removeItem('fp_inquiries_admin_session');
+      sessionStorage.removeItem('fp_inquiries_admin_email');
+      try {
+        localStorage.removeItem('fp_admin_session');
+        localStorage.removeItem('fp_inquiries_admin_session');
+      } catch {
+        // Ignore
+      }
     }
     try {
       await signOut(auth);
@@ -553,6 +585,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsAdmin(false);
     setCurrentUser(null);
+    setIsInquiriesAdmin(false);
+    setInquiriesAdminEmail(null);
   };
 
   // Dedicated Inquiries and Quotes Administrator Login
@@ -604,13 +638,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Logout Inquiries Admin - Securely terminate dedicated session and purge credentials
   const logoutInquiriesAdmin = async () => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('fp_inquiries_admin_session');
       sessionStorage.removeItem('fp_inquiries_admin_email');
+      sessionStorage.removeItem('fp_admin_session');
+      try {
+        localStorage.removeItem('fp_inquiries_admin_session');
+        localStorage.removeItem('fp_admin_session');
+      } catch {
+        // Ignore
+      }
+    }
+    try {
+      await signOut(auth);
+    } catch (e) {
+      // Ignore
     }
     setIsInquiriesAdmin(false);
     setInquiriesAdminEmail(null);
+    setIsAdmin(false);
+    setCurrentUser(null);
   };
 
   // Admin CRUD operations - Rock-solid persistence treating latest successfully saved content as authoritative

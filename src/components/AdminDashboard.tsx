@@ -247,6 +247,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [siteSettings]);
 
+  // Revalidate authentication session on browser navigation / pageshow
+  React.useEffect(() => {
+    const revalidate = () => {
+      const hasSession = sessionStorage.getItem('fp_admin_session') === 'true';
+      if (!hasSession && !currentUser) {
+        logoutUser();
+      }
+    };
+    window.addEventListener('pageshow', revalidate);
+    window.addEventListener('popstate', revalidate);
+    return () => {
+      window.removeEventListener('pageshow', revalidate);
+      window.removeEventListener('popstate', revalidate);
+    };
+  }, [currentUser]);
+
+  // Securely end session and return to home page
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      showNotice('success', 'You have been securely logged out.');
+      onClose();
+      const homeEl = document.getElementById('home');
+      if (homeEl) {
+        homeEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    } catch (err: any) {
+      console.error('Logout error:', err);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -271,23 +302,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {currentUser && (
-              <div className="hidden sm:flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
-                <span className="w-2 h-2 rounded-full bg-lime-400" />
-                <span className="truncate max-w-[150px]">{currentUser.email}</span>
-                <button
-                  onClick={logoutUser}
-                  className="ml-2 text-slate-400 hover:text-white"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs hover:shadow transition-all border border-rose-500/50 cursor-pointer"
+                title="Log out of Administrator Session"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span>Logout</span>
+              </button>
             )}
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Close Admin Modal"
             >
               <X className="w-6 h-6" />
             </button>
@@ -640,6 +670,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 >
                   <Database className="w-3.5 h-3.5" />
                   <span>Seed Baseline Data</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 py-2.5 px-3 rounded-lg text-xs font-bold transition-colors cursor-pointer mt-2"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Logout Administrator</span>
                 </button>
               </div>
             </div>

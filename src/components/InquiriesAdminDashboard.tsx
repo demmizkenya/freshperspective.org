@@ -309,6 +309,38 @@ export const InquiriesAdminDashboard: React.FC<InquiriesAdminDashboardProps> = (
     return filteredInquiries.slice(start, start + itemsPerPage);
   }, [filteredInquiries, currentPage, itemsPerPage]);
 
+  // Revalidate authentication session on browser navigation / pageshow
+  React.useEffect(() => {
+    const revalidate = () => {
+      const hasSession =
+        sessionStorage.getItem('fp_inquiries_admin_session') === 'true' ||
+        sessionStorage.getItem('fp_admin_session') === 'true';
+      if (!hasSession) {
+        logoutInquiriesAdmin();
+      }
+    };
+    window.addEventListener('pageshow', revalidate);
+    window.addEventListener('popstate', revalidate);
+    return () => {
+      window.removeEventListener('pageshow', revalidate);
+      window.removeEventListener('popstate', revalidate);
+    };
+  }, []);
+
+  // Securely end inquiries admin session and return to home page
+  const handleLogout = async () => {
+    try {
+      await logoutInquiriesAdmin();
+      onClose();
+      const homeEl = document.getElementById('home');
+      if (homeEl) {
+        homeEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    } catch (err: any) {
+      console.error('Logout error:', err);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -335,27 +367,27 @@ export const InquiriesAdminDashboard: React.FC<InquiriesAdminDashboardProps> = (
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isInquiriesAdmin && (
-              <div className="hidden sm:flex items-center gap-2 mr-2">
-                <span className="text-xs text-slate-300 font-mono bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700">
+              <>
+                <span className="hidden md:inline-block text-xs text-slate-300 font-mono bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700">
                   {inquiriesAdminEmail || 'Inquiries Admin'}
                 </span>
                 <button
                   type="button"
-                  onClick={logoutInquiriesAdmin}
-                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors text-xs flex items-center gap-1"
-                  title="Sign Out"
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs hover:shadow transition-all border border-rose-500/50 cursor-pointer"
+                  title="Log out of Inquiries Administrator Session"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden md:inline">Sign Out</span>
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>Logout</span>
                 </button>
-              </div>
+              </>
             )}
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+              className="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
               aria-label="Close Admin Modal"
             >
               <X className="w-5 h-5" />
