@@ -18,6 +18,7 @@ import { Footer } from './components/Footer';
 import { AdminDashboard } from './components/AdminDashboard';
 import { InquiriesAdminDashboard } from './components/InquiriesAdminDashboard';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
+import { BackButton } from './components/BackButton';
 
 export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -116,6 +117,9 @@ export default function App() {
 
         {/* Floating WhatsApp Quick Action (Bottom-Left with Pulse Animation) */}
         <FloatingWhatsApp />
+
+        {/* Back Navigation Button (Unobtrusive Floating Button with window.history.back) */}
+        <BackButton />
 
         {/* Main Website Content Administrator Portal Modal */}
         <AdminDashboard
