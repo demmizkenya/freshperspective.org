@@ -118,7 +118,7 @@ export default function App() {
         {/* Floating WhatsApp Quick Action (Bottom-Left with Pulse Animation) */}
         <FloatingWhatsApp />
 
-        {/* Back Navigation Button (Unobtrusive Floating Button with window.history.back) */}
+        {/* Back Navigation Button (Section & Page Navigation History) */}
         <BackButton />
 
         {/* Main Website Content Administrator Portal Modal */}
