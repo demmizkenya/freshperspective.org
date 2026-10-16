@@ -26,15 +26,23 @@ import {
   Database,
   Loader2,
   RefreshCw,
+  Film,
+  Video,
+  Play,
+  Pause,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
-import { uploadImageToStorage } from '../firebase';
+import { uploadImageToStorage, uploadVideoToStorage, captureVideoThumbnail } from '../firebase';
 import {
   PROFESSIONAL_CATEGORIES,
   Professional,
   Service,
   Project,
   GalleryItem,
+  VideoAdvert,
+  VIDEO_ADVERT_CATEGORIES,
   LeadershipMember,
   Insight,
   EventItem,
@@ -76,6 +84,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     galleryItems,
     saveGalleryItem,
     deleteGalleryItem,
+    videoAdverts,
+    saveVideoAdvert,
+    deleteVideoAdvert,
+    reorderVideoAdverts,
     leadership,
     saveLeadership,
     deleteLeadership,
@@ -161,6 +173,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     imagePath: '',
     isPublished: true,
   });
+
+  // 4b. Video Advertisements ("Brands In Motion") form
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<Partial<VideoAdvert>>({
+    title: '',
+    description: '',
+    category: 'Promotional Campaign',
+    videoUrl: '',
+    videoPath: '',
+    thumbnailUrl: '',
+    thumbnailPath: '',
+    duration: '',
+    isPublished: true,
+    featured: false,
+  });
+  const [videoInputMode, setVideoInputMode] = useState<'file' | 'url'>('file');
+  const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
+  const [videoThumbUploadProgress, setVideoThumbUploadProgress] = useState<number | null>(null);
+  const [previewVideoItem, setPreviewVideoItem] = useState<VideoAdvert | null>(null);
 
   // 5. Leadership form
   const [leadershipModalOpen, setLeadershipModalOpen] = useState(false);
@@ -548,6 +579,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
                 <span className="text-slate-400 text-[11px] font-mono">
                   {galleryItems.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('videos')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === 'videos'
+                    ? 'bg-[#0B132B] text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-200/70'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Film className="w-4 h-4 text-lime-400" />
+                  <span>Brands In Motion (Adverts)</span>
+                </div>
+                <span className="text-slate-400 text-[11px] font-mono">
+                  {videoAdverts.length}
                 </span>
               </button>
 
@@ -1563,6 +1611,228 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   ) : (
                     <div className="text-center py-12 border border-dashed border-slate-300 rounded-xl text-slate-500 text-xs">
                       No gallery images uploaded yet.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 5b: VIDEO ADVERTISEMENTS ("BRANDS IN MOTION") */}
+              {activeTab === 'videos' && (
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-[#0B132B]">Brands In Motion — Video Advertisements</h3>
+                        <span className="text-[10px] bg-lime-100 text-lime-900 font-extrabold px-2 py-0.5 rounded-full border border-lime-300">
+                          {videoAdverts.length} Videos
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Upload and manage commercial video advertisements, marketing campaigns, and promotional showcases.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingVideo({
+                          title: '',
+                          description: '',
+                          category: 'Promotional Campaign',
+                          videoUrl: '',
+                          videoPath: '',
+                          thumbnailUrl: '',
+                          thumbnailPath: '',
+                          duration: '',
+                          isPublished: true,
+                          featured: false,
+                        });
+                        setVideoInputMode('file');
+                        setVideoUploadProgress(null);
+                        setVideoThumbUploadProgress(null);
+                        setVideoModalOpen(true);
+                      }}
+                      className="bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-bold px-4 py-2.5 rounded-lg text-xs inline-flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Upload Video Advert</span>
+                    </button>
+                  </div>
+
+                  {videoAdverts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {videoAdverts
+                        .slice()
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .map((video, idx) => (
+                          <div
+                            key={video.id}
+                            className={`border rounded-xl p-4 bg-white shadow-2xs hover:shadow-md transition-all flex flex-col justify-between ${
+                              video.isPublished ? 'border-slate-200' : 'border-amber-300 bg-amber-50/20'
+                            }`}
+                          >
+                            <div>
+                              {/* Video Preview thumbnail with play overlay */}
+                              <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-900 mb-3 group">
+                                <video
+                                  src={video.videoUrl}
+                                  poster={video.thumbnailUrl}
+                                  preload="metadata"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewVideoItem(video)}
+                                    className="w-10 h-10 rounded-full bg-[#74C01E] text-[#0B132B] flex items-center justify-center shadow-lg hover:scale-110 transition-transform cursor-pointer"
+                                    title="Preview Video Playback"
+                                  >
+                                    <Play className="w-5 h-5 fill-[#0B132B] ml-0.5" />
+                                  </button>
+                                </div>
+                                {video.duration && (
+                                  <span className="absolute bottom-2 right-2 bg-black/75 text-white font-mono text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                    {video.duration}
+                                  </span>
+                                )}
+                                <span className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  video.isPublished
+                                    ? 'bg-lime-400 text-[#0B132B]'
+                                    : 'bg-amber-400 text-amber-950'
+                                }`}>
+                                  {video.isPublished ? 'Published' : 'Draft / Unpublished'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="font-bold text-lime-800 bg-lime-50 px-2 py-0.5 rounded text-[10px] border border-lime-200">
+                                  {video.category || 'Commercial Advert'}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  Order #{video.order || idx + 1}
+                                </span>
+                              </div>
+
+                              <h4 className="font-bold text-sm text-[#0B132B] line-clamp-1 mb-1">
+                                {video.title}
+                              </h4>
+                              <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                                {video.description}
+                              </p>
+                            </div>
+
+                            {/* Actions toolbar */}
+                            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                {/* Move Up */}
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => {
+                                    const sorted = [...videoAdverts].sort((a, b) => (a.order || 0) - (b.order || 0));
+                                    if (idx > 0) {
+                                      const prevId = sorted[idx - 1].id;
+                                      const curId = sorted[idx].id;
+                                      const reordered = sorted.map((v) => v.id);
+                                      reordered[idx - 1] = curId;
+                                      reordered[idx] = prevId;
+                                      reorderVideoAdverts(reordered);
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-500 hover:text-[#0B132B] disabled:opacity-30 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                                  title="Move Up in Display Order"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                {/* Move Down */}
+                                <button
+                                  type="button"
+                                  disabled={idx === videoAdverts.length - 1}
+                                  onClick={() => {
+                                    const sorted = [...videoAdverts].sort((a, b) => (a.order || 0) - (b.order || 0));
+                                    if (idx < sorted.length - 1) {
+                                      const nextId = sorted[idx + 1].id;
+                                      const curId = sorted[idx].id;
+                                      const reordered = sorted.map((v) => v.id);
+                                      reordered[idx + 1] = curId;
+                                      reordered[idx] = nextId;
+                                      reorderVideoAdverts(reordered);
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-500 hover:text-[#0B132B] disabled:opacity-30 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                                  title="Move Down in Display Order"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                                {/* Toggle Publish */}
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await saveVideoAdvert({
+                                      id: video.id,
+                                      isPublished: !video.isPublished,
+                                    });
+                                    showNotice('success', video.isPublished ? 'Video unpublished.' : 'Video published on website!');
+                                  }}
+                                  className={`p-1.5 rounded transition-colors text-xs inline-flex items-center gap-1 cursor-pointer ${
+                                    video.isPublished
+                                      ? 'text-emerald-700 hover:bg-emerald-50'
+                                      : 'text-amber-700 hover:bg-amber-50'
+                                  }`}
+                                  title={video.isPublished ? 'Click to Unpublish' : 'Click to Publish'}
+                                >
+                                  {video.isPublished ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                                  <span className="text-[10px] font-bold">{video.isPublished ? 'Live' : 'Hidden'}</span>
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewVideoItem(video)}
+                                  className="p-1.5 text-slate-600 hover:text-lime-700 hover:bg-slate-100 rounded transition-colors text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                                  title="Preview Video"
+                                >
+                                  <Play className="w-3 h-3" />
+                                  <span>Preview</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingVideo(video);
+                                    setVideoInputMode('file');
+                                    setVideoUploadProgress(null);
+                                    setVideoThumbUploadProgress(null);
+                                    setVideoModalOpen(true);
+                                  }}
+                                  className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                                  title="Edit Video Details"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (window.confirm(`Permanently delete video advertisement "${video.title}"?`)) {
+                                      try {
+                                        await deleteVideoAdvert(video.id, video.videoPath, video.thumbnailPath);
+                                        showNotice('success', 'Video advertisement deleted from Firestore and Storage.');
+                                      } catch (e: any) {
+                                        showNotice('error', e.message || 'Failed to delete video.');
+                                      }
+                                    }
+                                  }}
+                                  className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                  title="Delete Video Advert"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 border border-dashed border-slate-300 rounded-xl text-slate-500 text-xs">
+                      No video advertisements uploaded yet. Click &ldquo;Upload Video Advert&rdquo; to add your first commercial campaign.
                     </div>
                   )}
                 </div>
@@ -3071,6 +3341,385 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 10: VIDEO ADVERTISEMENT ("BRANDS IN MOTION") */}
+      {videoModalOpen && (
+        <div className="fixed inset-0 z-60 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 text-xs my-auto max-h-[94vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-200 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-lime-100 text-lime-800 flex items-center justify-center">
+                  <Film className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#0B132B] text-base">
+                    {editingVideo.id ? 'Edit Video Advertisement' : 'Upload Video Advertisement'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">Brands In Motion — Permanent Cloud Storage</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setVideoModalOpen(false);
+                  setVideoUploadProgress(null);
+                  setVideoThumbUploadProgress(null);
+                }}
+                className="text-slate-400 hover:text-slate-700 font-bold p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!editingVideo.videoUrl) {
+                  showNotice('error', 'Please upload a video file or provide a valid video URL.');
+                  return;
+                }
+                if (!editingVideo.title?.trim()) {
+                  showNotice('error', 'Please provide a video title.');
+                  return;
+                }
+
+                setIsProcessing(true);
+                try {
+                  await saveVideoAdvert({
+                    ...editingVideo,
+                    category: editingVideo.category || 'Promotional Campaign',
+                    isPublished: editingVideo.isPublished ?? true,
+                    order: editingVideo.order ?? videoAdverts.length + 1,
+                  });
+                  setVideoModalOpen(false);
+                  setVideoUploadProgress(null);
+                  setVideoThumbUploadProgress(null);
+                  showNotice('success', editingVideo.id ? 'Video advertisement updated!' : 'Video advertisement published to Brands In Motion!');
+                } catch (err: any) {
+                  showNotice('error', err.message || 'Failed to save video advert.');
+                } finally {
+                  setIsProcessing(false);
+                }
+              }}
+              className="space-y-4 overflow-y-auto pr-1 flex-1"
+            >
+              {/* Video Source Switcher */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1.5">Video Source *</label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setVideoInputMode('file')}
+                    className={`py-2 px-3 rounded-lg font-bold text-xs border transition-all cursor-pointer ${
+                      videoInputMode === 'file'
+                        ? 'bg-[#0B132B] text-lime-400 border-[#0B132B]'
+                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
+                    }`}
+                  >
+                    📁 Upload From Device
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVideoInputMode('url')}
+                    className={`py-2 px-3 rounded-lg font-bold text-xs border transition-all cursor-pointer ${
+                      videoInputMode === 'url'
+                        ? 'bg-[#0B132B] text-lime-400 border-[#0B132B]'
+                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
+                    }`}
+                  >
+                    🔗 Web Video URL
+                  </button>
+                </div>
+
+                {videoInputMode === 'file' ? (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.webm,.mov,.m4v"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setVideoUploadProgress(10);
+                          try {
+                            // 1. Auto capture thumbnail from file
+                            const autoThumb = await captureVideoThumbnail(file);
+
+                            // 2. Upload video file to Firebase Storage
+                            const result = await uploadVideoToStorage(file, 'videos', (pct) => {
+                              setVideoUploadProgress(pct);
+                            });
+
+                            setEditingVideo((prev) => ({
+                              ...prev,
+                              videoUrl: result.downloadUrl,
+                              videoPath: result.storagePath,
+                              thumbnailUrl: prev.thumbnailUrl || autoThumb || '',
+                              title: prev.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+                            }));
+                            setVideoUploadProgress(null);
+                            showNotice('success', 'Video file uploaded and stored permanently in Firebase Storage.');
+                          } catch (err: any) {
+                            setVideoUploadProgress(null);
+                            showNotice('error', err.message || 'Video upload failed. Please try an MP4 or WebM file.');
+                          } finally {
+                            e.target.value = '';
+                          }
+                        }
+                      }}
+                      className="w-full text-xs file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#0B132B] file:text-lime-400 hover:file:bg-slate-800 cursor-pointer"
+                    />
+
+                    {videoUploadProgress !== null && (
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between text-[11px] text-slate-600 font-bold">
+                          <span>Uploading video to Cloud Storage...</span>
+                          <span>{videoUploadProgress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                          <div
+                            className="bg-[#84cc16] h-full transition-all duration-300"
+                            style={{ width: `${videoUploadProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-slate-500">
+                      Supports MP4, WebM, MOV. Up to 150MB. Uploads are stored permanently in Cloud Storage.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <input
+                      type="url"
+                      placeholder="https://example.com/commercial-advert.mp4"
+                      value={editingVideo.videoUrl || ''}
+                      onChange={(e) => setEditingVideo({ ...editingVideo, videoUrl: e.target.value })}
+                      className="w-full border rounded-lg p-2.5 text-xs text-[#0B132B]"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      Enter a direct link to an MP4 or WebM video stream.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Video Player Preview if URL is set */}
+              {editingVideo.videoUrl && (
+                <div className="space-y-1.5">
+                  <label className="block font-bold text-slate-800">Video Preview</label>
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-300">
+                    <video
+                      src={editingVideo.videoUrl}
+                      poster={editingVideo.thumbnailUrl}
+                      controls
+                      playsInline
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Thumbnail Selection */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">Video Thumbnail / Poster Image</label>
+                {editingVideo.thumbnailUrl && (
+                  <div className="relative w-32 aspect-video rounded-lg overflow-hidden bg-slate-100 border border-slate-200 mb-2">
+                    <img
+                      src={editingVideo.thumbnailUrl}
+                      alt="Thumbnail Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditingVideo({ ...editingVideo, thumbnailUrl: '', thumbnailPath: '' })}
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded p-0.5 text-[9px]"
+                      title="Remove custom thumbnail"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setVideoThumbUploadProgress(15);
+                        try {
+                          const res = await uploadImageToStorage(file, 'video_thumbnails', (pct) => {
+                            setVideoThumbUploadProgress(pct);
+                          });
+                          setEditingVideo((prev) => ({
+                            ...prev,
+                            thumbnailUrl: res.downloadUrl,
+                            thumbnailPath: res.storagePath,
+                          }));
+                          setVideoThumbUploadProgress(null);
+                          showNotice('success', 'Custom video thumbnail saved.');
+                        } catch (err: any) {
+                          setVideoThumbUploadProgress(null);
+                          showNotice('error', err.message || 'Failed to upload thumbnail.');
+                        } finally {
+                          e.target.value = '';
+                        }
+                      }
+                    }}
+                    className="w-full text-xs file:mr-2 file:py-1.5 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer"
+                  />
+                </div>
+                {videoThumbUploadProgress !== null && (
+                  <p className="text-[10px] text-lime-700 mt-1 font-bold">Uploading thumbnail: {videoThumbUploadProgress}%</p>
+                )}
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Optional. If empty, an automated frame is extracted or a default poster is used.
+                </p>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">Advert Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Next-Gen Tech Commercial Advert"
+                  value={editingVideo.title || ''}
+                  onChange={(e) => setEditingVideo({ ...editingVideo, title: e.target.value })}
+                  className="w-full border rounded-lg p-2.5 text-xs text-[#0B132B] font-medium"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">Advert Synopsis / Description *</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Describe the campaign, message, client focus, or promotional narrative..."
+                  value={editingVideo.description || ''}
+                  onChange={(e) => setEditingVideo({ ...editingVideo, description: e.target.value })}
+                  className="w-full border rounded-lg p-2.5 text-xs text-[#0B132B]"
+                />
+              </div>
+
+              {/* Category & Duration */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">Category</label>
+                  <select
+                    value={editingVideo.category || 'Promotional Campaign'}
+                    onChange={(e) => setEditingVideo({ ...editingVideo, category: e.target.value })}
+                    className="w-full border rounded-lg p-2.5 text-xs text-[#0B132B] bg-white"
+                  >
+                    {VIDEO_ADVERT_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">Duration (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 0:30, 1:15"
+                    value={editingVideo.duration || ''}
+                    onChange={(e) => setEditingVideo({ ...editingVideo, duration: e.target.value })}
+                    className="w-full border rounded-lg p-2.5 text-xs text-[#0B132B]"
+                  />
+                </div>
+              </div>
+
+              {/* Checkboxes: Published & Featured */}
+              <div className="flex flex-wrap items-center gap-6 pt-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={editingVideo.isPublished ?? true}
+                    onChange={(e) => setEditingVideo({ ...editingVideo, isPublished: e.target.checked })}
+                    className="rounded text-lime-600 focus:ring-lime-500 w-4 h-4"
+                  />
+                  <span>Publish immediately on website</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={editingVideo.featured ?? false}
+                    onChange={(e) => setEditingVideo({ ...editingVideo, featured: e.target.checked })}
+                    className="rounded text-lime-600 focus:ring-lime-500 w-4 h-4"
+                  />
+                  <span>Mark as Featured Campaign</span>
+                </label>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVideoModalOpen(false);
+                    setVideoUploadProgress(null);
+                    setVideoThumbUploadProgress(null);
+                  }}
+                  className="px-4 py-2 border rounded-lg font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing || videoUploadProgress !== null}
+                  className="bg-[#84cc16] hover:bg-[#65a30d] text-[#0B132B] font-bold px-5 py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                >
+                  {isProcessing ? 'Saving to Firestore...' : editingVideo.id ? 'Update Video Advert' : 'Save & Publish Advert'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADMIN VIDEO PREVIEW PLAYER */}
+      {previewVideoItem && (
+        <div className="fixed inset-0 z-70 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#0B132B] rounded-2xl max-w-2xl w-full p-4 border border-slate-800 text-white shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Film className="w-4 h-4 text-lime-400" />
+                <h4 className="font-bold text-sm text-white truncate max-w-md">
+                  {previewVideoItem.title}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewVideoItem(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="relative aspect-video rounded-xl overflow-hidden bg-black mb-3">
+              <video
+                src={previewVideoItem.videoUrl}
+                poster={previewVideoItem.thumbnailUrl}
+                controls
+                autoPlay
+                playsInline
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            <div className="text-xs text-slate-300">
+              <span className="font-bold text-lime-400">{previewVideoItem.category}</span>
+              <p className="mt-1 line-clamp-2">{previewVideoItem.description}</p>
+            </div>
           </div>
         </div>
       )}

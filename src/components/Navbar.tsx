@@ -18,6 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onRequestQuote }) => {
     { name: 'Professionals', href: '#professionals' },
     { name: 'Projects', href: '#projects' },
     { name: 'Gallery', href: '#gallery' },
+    { name: 'Adverts', href: '#brands-in-motion' },
     { name: 'Leadership', href: '#leadership' },
     { name: 'Insights', href: '#insights' },
     { name: 'Events', href: '#events' },

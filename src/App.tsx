@@ -8,6 +8,7 @@ import { ServicesSection } from './components/ServicesSection';
 import { ProfessionalsSection } from './components/ProfessionalsSection';
 import { ProjectsSection } from './components/ProjectsSection';
 import { GallerySection } from './components/GallerySection';
+import { VideoAdvertsSection } from './components/VideoAdvertsSection';
 import { LeadershipSection } from './components/LeadershipSection';
 import { InsightsSection } from './components/InsightsSection';
 import { EventsSection } from './components/EventsSection';
@@ -88,7 +89,13 @@ export default function App() {
           onOpenAdminAddGallery={() => handleOpenAdminWithTab('gallery')}
         />
 
-        {/* 7. Leadership & Governance */}
+        {/* 7. Brands In Motion - Commercial Video Advertisements */}
+        <VideoAdvertsSection
+          onOpenAdminAddVideo={() => handleOpenAdminWithTab('videos')}
+          onRequestQuote={(serviceTitle) => scrollToQuote(serviceTitle)}
+        />
+
+        {/* 8. Leadership & Governance */}
         <LeadershipSection
           onOpenAdminAddLeader={() => handleOpenAdminWithTab('leadership')}
         />

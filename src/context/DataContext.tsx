@@ -35,11 +35,13 @@ import {
   Publication,
   FAQ,
   Inquiry,
+  VideoAdvert,
 } from '../types';
 import {
   DEFAULT_SITE_SETTINGS,
   DEFAULT_SERVICES,
   DEFAULT_FAQS,
+  DEFAULT_VIDEO_ADVERTS,
   AUTHORIZED_ADMIN_EMAILS,
 } from '../constants';
 
@@ -50,6 +52,7 @@ interface DataContextType {
   services: Service[];
   projects: Project[];
   galleryItems: GalleryItem[];
+  videoAdverts: VideoAdvert[];
   leadership: LeadershipMember[];
   insights: Insight[];
   events: EventItem[];
@@ -80,6 +83,9 @@ interface DataContextType {
   deleteProject: (id: string, imagePath?: string) => Promise<void>;
   saveGalleryItem: (item: Partial<GalleryItem>) => Promise<void>;
   deleteGalleryItem: (id: string, imagePath?: string) => Promise<void>;
+  saveVideoAdvert: (video: Partial<VideoAdvert>) => Promise<void>;
+  deleteVideoAdvert: (id: string, videoPath?: string, thumbnailPath?: string) => Promise<void>;
+  reorderVideoAdverts: (orderedIds: string[]) => Promise<void>;
   saveLeadership: (leader: Partial<LeadershipMember>) => Promise<void>;
   deleteLeadership: (id: string, photoPath?: string) => Promise<void>;
   saveInsight: (insight: Partial<Insight>) => Promise<void>;
@@ -114,6 +120,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [services, setServices] = useState<Service[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [videoAdverts, setVideoAdverts] = useState<VideoAdvert[]>([]);
   const [leadership, setLeadership] = useState<LeadershipMember[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -312,7 +319,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         unsubs.push(unsubGal);
 
-        // 6. Leadership
+        // 6. Video Advertisements ("Brands In Motion")
+        const vidQuery = query(collection(db, 'video_adverts'), orderBy('order', 'asc'));
+        const unsubVid = onSnapshot(vidQuery, (snap) => {
+          const list: VideoAdvert[] = [];
+          snap.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as VideoAdvert);
+          });
+          if (list.length > 0) {
+            setVideoAdverts(list);
+          } else {
+            setVideoAdverts(DEFAULT_VIDEO_ADVERTS.map((v, idx) => ({ ...v, order: idx + 1 })));
+          }
+        }, (err) => {
+          console.warn('Video adverts listener note:', err.message);
+          setVideoAdverts(DEFAULT_VIDEO_ADVERTS.map((v, idx) => ({ ...v, order: idx + 1 })));
+        });
+        unsubs.push(unsubVid);
+
+        // 7. Leadership
         const leadQuery = query(collection(db, 'leadership'), orderBy('order', 'asc'));
         const unsubLead = onSnapshot(leadQuery, (snap) => {
           const list: LeadershipMember[] = [];
@@ -888,6 +913,68 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const saveVideoAdvert = async (video: Partial<VideoAdvert>) => {
+    try {
+      const isNew = !video.id || video.id.startsWith('default-vid-');
+      const dataToSave = {
+        ...video,
+        order: video.order ?? videoAdverts.length + 1,
+        isPublished: video.isPublished ?? true,
+        updatedAt: new Date().toISOString(),
+        ...(isNew ? { createdAt: new Date().toISOString() } : {}),
+      };
+
+      if (isNew) {
+        const { id, ...rest } = dataToSave;
+        const docRef = await addDoc(collection(db, 'video_adverts'), rest);
+        setVideoAdverts((prev) => [...prev, { id: docRef.id, ...rest } as VideoAdvert]);
+      } else {
+        const { id, ...rest } = dataToSave;
+        await updateDoc(doc(db, 'video_adverts', id as string), rest);
+        setVideoAdverts((prev) =>
+          prev.map((v) => (v.id === id ? ({ ...v, ...dataToSave } as VideoAdvert) : v))
+        );
+      }
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, 'video_adverts');
+      throw err;
+    }
+  };
+
+  const deleteVideoAdvert = async (id: string, videoPath?: string, thumbnailPath?: string) => {
+    try {
+      if (!id.startsWith('default-vid-')) {
+        await deleteDoc(doc(db, 'video_adverts', id));
+      }
+      setVideoAdverts((prev) => prev.filter((v) => v.id !== id));
+      if (videoPath) await deleteStorageFile(videoPath);
+      if (thumbnailPath) await deleteStorageFile(thumbnailPath);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.DELETE, `video_adverts/${id}`);
+      throw err;
+    }
+  };
+
+  const reorderVideoAdverts = async (orderedIds: string[]) => {
+    try {
+      const updates = orderedIds.map((id, index) => {
+        if (!id.startsWith('default-vid-')) {
+          return updateDoc(doc(db, 'video_adverts', id), { order: index + 1 });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(updates);
+      setVideoAdverts((prev) => {
+        const copy = [...prev];
+        copy.sort((a, b) => orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id));
+        return copy.map((item, idx) => ({ ...item, order: idx + 1 }));
+      });
+    } catch (err: any) {
+      console.error('Failed to reorder videos:', err);
+      throw err;
+    }
+  };
+
   const saveLeadership = async (leader: Partial<LeadershipMember>) => {
     try {
       const isNew = !leader.id;
@@ -1172,6 +1259,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         services,
         projects,
         galleryItems,
+        videoAdverts,
         leadership,
         insights,
         events,
@@ -1196,6 +1284,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteProject,
         saveGalleryItem,
         deleteGalleryItem,
+        saveVideoAdvert,
+        deleteVideoAdvert,
+        reorderVideoAdverts,
         saveLeadership,
         deleteLeadership,
         saveInsight,

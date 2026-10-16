@@ -191,3 +191,34 @@ export interface Inquiry {
   createdAt: string;
   updatedAt?: string;
 }
+
+export const VIDEO_ADVERT_CATEGORIES = [
+  'Promotional Campaign',
+  'Brand Spotlight',
+  'Product Showcase',
+  'Corporate Services',
+  'Event & Summits',
+  'Digital Solutions',
+  'Commercial Marketing',
+  'Client Story',
+] as const;
+
+export type VideoAdvertCategory = typeof VIDEO_ADVERT_CATEGORIES[number] | string;
+
+export interface VideoAdvert {
+  id: string;
+  title: string;
+  description: string;
+  category: VideoAdvertCategory;
+  videoUrl: string;
+  videoPath?: string;
+  thumbnailUrl?: string;
+  thumbnailPath?: string;
+  duration?: string;
+  order: number;
+  isPublished: boolean;
+  featured?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
