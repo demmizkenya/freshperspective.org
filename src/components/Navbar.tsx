@@ -24,6 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onRequestQuote }) => {
   ];
 
   const moreNavLinks = [
+    { name: 'Visitor Feedback', href: '#feedback' },
     { name: 'CEO Profile', href: '#executive-leadership' },
     { name: 'Leadership & Board', href: '#leadership' },
     { name: 'Insights & Articles', href: '#insights' },
@@ -42,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onRequestQuote }) => {
     { name: 'Visual Gallery', href: '#gallery' },
     { name: 'Brands In Motion (Adverts)', href: '#brands-in-motion' },
     { name: 'Client Testimonials', href: '#testimonials' },
+    { name: 'Visitor Feedback', href: '#feedback' },
     { name: 'Leadership & Governance', href: '#leadership' },
     { name: 'Insights & Articles', href: '#insights' },
     { name: 'Events & Summits', href: '#events' },

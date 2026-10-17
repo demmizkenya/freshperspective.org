@@ -10,6 +10,7 @@ import {
   deleteDoc,
   onSnapshot,
   query,
+  where,
   orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -36,12 +37,16 @@ import {
   FAQ,
   Inquiry,
   VideoAdvert,
+  Testimonial,
+  VisitorFeedback,
 } from '../types';
 import {
   DEFAULT_SITE_SETTINGS,
   DEFAULT_SERVICES,
   DEFAULT_FAQS,
   DEFAULT_VIDEO_ADVERTS,
+  DEFAULT_TESTIMONIALS,
+  DEFAULT_FEEDBACK,
   AUTHORIZED_ADMIN_EMAILS,
 } from '../constants';
 
@@ -58,8 +63,36 @@ interface DataContextType {
   events: EventItem[];
   publications: Publication[];
   faqs: FAQ[];
+  testimonials: Testimonial[];
+  allTestimonials: Testimonial[];
+  feedbackList: VisitorFeedback[];
+  allFeedbackList: VisitorFeedback[];
   isLoading: boolean;
   error: string | null;
+
+  // Testimonial Submission & Review
+  submitTestimonial: (data: {
+    name: string;
+    title?: string;
+    organization?: string;
+    quote: string;
+    service?: string;
+    rating?: number;
+  }) => Promise<{ success: boolean; error?: string }>;
+  approveTestimonial: (id: string) => Promise<void>;
+  rejectTestimonial: (id: string) => Promise<void>;
+  deleteTestimonial: (id: string) => Promise<void>;
+
+  // Visitor Feedback Submission & Review
+  submitFeedback: (data: {
+    name?: string;
+    email?: string;
+    message: string;
+    category?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  approveFeedback: (id: string) => Promise<void>;
+  rejectFeedback: (id: string) => Promise<void>;
+  deleteFeedback: (id: string) => Promise<void>;
 
   // Inquiry Submission
   submitInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'status'>) => Promise<{ success: boolean; error?: string }>;
@@ -127,6 +160,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [publications, setPublications] = useState<Publication[]>([]);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
+  const [allTestimonials, setAllTestimonials] = useState<Testimonial[]>([]);
+  const [feedbackList, setFeedbackList] = useState<VisitorFeedback[]>(DEFAULT_FEEDBACK);
+  const [allFeedbackList, setAllFeedbackList] = useState<VisitorFeedback[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -421,6 +458,121 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubs.forEach((unsub) => unsub());
     };
   }, []);
+
+  // Dedicated real-time listener for Testimonials and Visitor Feedback (switches based on admin auth state)
+  useEffect(() => {
+    let unsubs: (() => void)[] = [];
+
+    try {
+      // 11. Testimonials
+      // If admin, query all testimonials for the review panel.
+      // If public visitor, query ONLY approved testimonials to satisfy security rules and keep unapproved/rejected private.
+      const testQuery = isAdmin
+        ? collection(db, 'testimonials')
+        : query(collection(db, 'testimonials'), where('isApproved', '==', true));
+
+      const unsubTest = onSnapshot(
+        testQuery,
+        (snap) => {
+          const list: Testimonial[] = [];
+          snap.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as Testimonial);
+          });
+
+          // Sort in memory by createdAt descending (requires no composite indexes)
+          list.sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime()
+          );
+
+          if (isAdmin) {
+            setAllTestimonials(list);
+            const approved = list.filter((t) => t.isApproved);
+            const approvedIds = new Set(approved.map((a) => a.id));
+            const baseFiltered = DEFAULT_TESTIMONIALS.filter(
+              (d) => !approvedIds.has(d.id)
+            );
+            setTestimonials([...baseFiltered, ...approved]);
+          } else {
+            setAllTestimonials([]);
+            const approvedIds = new Set(list.map((a) => a.id));
+            const baseFiltered = DEFAULT_TESTIMONIALS.filter(
+              (d) => !approvedIds.has(d.id)
+            );
+            setTestimonials([...baseFiltered, ...list]);
+          }
+        },
+        (err) => {
+          console.warn('Testimonials listener note:', err.message);
+          setTestimonials(DEFAULT_TESTIMONIALS);
+        }
+      );
+      unsubs.push(unsubTest);
+
+      // 12. Visitor Feedback
+      // If admin, query all feedback (with email) for the moderation panel.
+      // If public visitor, query ONLY approved feedback, and NEVER store or expose email.
+      const feedQuery = isAdmin
+        ? collection(db, 'feedback')
+        : query(collection(db, 'feedback'), where('isApproved', '==', true));
+
+      const unsubFeed = onSnapshot(
+        feedQuery,
+        (snap) => {
+          const list: VisitorFeedback[] = [];
+          snap.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() } as VisitorFeedback);
+          });
+
+          // Sort in memory by createdAt descending
+          list.sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime()
+          );
+
+          if (isAdmin) {
+            setAllFeedbackList(list);
+            const approved = list
+              .filter((f) => f.isApproved)
+              .map((item) => {
+                const { email, ...safeFields } = item;
+                return safeFields as VisitorFeedback;
+              });
+            const approvedIds = new Set(approved.map((a) => a.id));
+            const baseFeedFiltered = DEFAULT_FEEDBACK.filter(
+              (d) => !approvedIds.has(d.id)
+            );
+            setFeedbackList([...baseFeedFiltered, ...approved]);
+          } else {
+            setAllFeedbackList([]);
+            // Public visitor: email is completely omitted
+            const approved = list.map((item) => {
+              const { email, ...safeFields } = item;
+              return safeFields as VisitorFeedback;
+            });
+            const approvedIds = new Set(approved.map((a) => a.id));
+            const baseFeedFiltered = DEFAULT_FEEDBACK.filter(
+              (d) => !approvedIds.has(d.id)
+            );
+            setFeedbackList([...baseFeedFiltered, ...approved]);
+          }
+        },
+        (err) => {
+          console.warn('Feedback listener note:', err.message);
+          setFeedbackList(DEFAULT_FEEDBACK);
+        }
+      );
+      unsubs.push(unsubFeed);
+    } catch (err) {
+      console.warn('Testimonial/Feedback subscription error:', err);
+    }
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [isAdmin]);
 
   // Fetch inquiries when any admin is logged in
   const fetchInquiries = async () => {
@@ -1161,6 +1313,232 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Testimonials Submission & Approval Management
+  const submitTestimonial = async (data: {
+    name: string;
+    title?: string;
+    organization?: string;
+    quote: string;
+    service?: string;
+    rating?: number;
+  }) => {
+    try {
+      if (!data.name || data.name.trim().length < 2) {
+        return { success: false, error: 'Please enter your full name (minimum 2 characters).' };
+      }
+      if (!data.quote || data.quote.trim().length < 10) {
+        return { success: false, error: 'Testimonial quote must be at least 10 characters long.' };
+      }
+
+      // Prevent duplicate submissions: check recently submitted hash
+      const hash = `test_${data.name.trim().toLowerCase()}_${data.quote.trim().toLowerCase().slice(0, 50)}`;
+      const now = Date.now();
+      if (recentSubmissionsRef.current.has(hash)) {
+        const lastTime = recentSubmissionsRef.current.get(hash)!;
+        if (now - lastTime < 60000) {
+          return { success: false, error: 'You have recently submitted this testimonial. It is awaiting administrative review.' };
+        }
+      }
+      recentSubmissionsRef.current.set(hash, now);
+
+      // Check if duplicate testimonial already exists in database or baseline records
+      const testPool = allTestimonials.length > 0 ? allTestimonials : testimonials;
+      const isDuplicate = testPool.some(
+        (t) =>
+          t.name.trim().toLowerCase() === data.name.trim().toLowerCase() &&
+          t.quote.trim().toLowerCase() === data.quote.trim().toLowerCase()
+      );
+      if (isDuplicate) {
+        return { success: false, error: 'A testimonial matching this submission already exists in our system.' };
+      }
+
+      const newRecord = {
+        name: data.name.trim(),
+        title: data.title?.trim() || '',
+        organization: data.organization?.trim() || '',
+        quote: data.quote.trim(),
+        service: data.service?.trim() || 'General Consulting',
+        rating: Math.max(1, Math.min(5, Number(data.rating) || 5)),
+        isApproved: false,
+        status: 'pending' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const docRef = await addDoc(collection(db, 'testimonials'), newRecord);
+      setAllTestimonials((prev) => [{ id: docRef.id, ...newRecord }, ...prev]);
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error submitting testimonial:', err);
+      return { success: false, error: err.message || 'Failed to submit testimonial. Please try again.' };
+    }
+  };
+
+  const approveTestimonial = async (id: string) => {
+    try {
+      if (id.startsWith('default-test-')) {
+        // Default baseline is already approved
+        return;
+      }
+      await updateDoc(doc(db, 'testimonials', id), {
+        isApproved: true,
+        status: 'approved',
+        updatedAt: new Date().toISOString(),
+      });
+      setAllTestimonials((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, isApproved: true, status: 'approved' } : t))
+      );
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, `testimonials/${id}`);
+      throw err;
+    }
+  };
+
+  const rejectTestimonial = async (id: string) => {
+    try {
+      if (id.startsWith('default-test-')) {
+        setTestimonials((prev) => prev.filter((t) => t.id !== id));
+        return;
+      }
+      await updateDoc(doc(db, 'testimonials', id), {
+        isApproved: false,
+        status: 'rejected',
+        updatedAt: new Date().toISOString(),
+      });
+      setAllTestimonials((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, isApproved: false, status: 'rejected' } : t))
+      );
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, `testimonials/${id}`);
+      throw err;
+    }
+  };
+
+  const deleteTestimonial = async (id: string) => {
+    try {
+      if (!id.startsWith('default-test-')) {
+        await deleteDoc(doc(db, 'testimonials', id));
+      }
+      setAllTestimonials((prev) => prev.filter((t) => t.id !== id));
+      setTestimonials((prev) => prev.filter((t) => t.id !== id));
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.DELETE, `testimonials/${id}`);
+      throw err;
+    }
+  };
+
+  // Visitor Feedback Submission & Approval Management
+  const submitFeedback = async (data: {
+    name?: string;
+    email?: string;
+    message: string;
+    category?: string;
+  }) => {
+    try {
+      if (!data.message || data.message.trim().length < 10) {
+        return { success: false, error: 'Feedback message must be at least 10 characters.' };
+      }
+      if (data.email && data.email.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.email.trim())) {
+          return { success: false, error: 'Please enter a valid email address.' };
+        }
+      }
+
+      // Check duplicate submissions within recent 60s
+      const feedHash = `feed_${(data.name || '').trim().toLowerCase()}_${data.message.trim().toLowerCase().slice(0, 50)}`;
+      const now = Date.now();
+      if (recentSubmissionsRef.current.has(feedHash)) {
+        const lastTime = recentSubmissionsRef.current.get(feedHash)!;
+        if (now - lastTime < 60000) {
+          return { success: false, error: 'You have recently submitted this feedback.' };
+        }
+      }
+      recentSubmissionsRef.current.set(feedHash, now);
+
+      // Check if duplicate feedback exists in database or baseline records
+      const feedPool = allFeedbackList.length > 0 ? allFeedbackList : feedbackList;
+      const isFeedDuplicate = feedPool.some(
+        (f) =>
+          f.message.trim().toLowerCase() === data.message.trim().toLowerCase() &&
+          ((!data.name && !f.name) || (data.name && f.name && data.name.trim().toLowerCase() === f.name.trim().toLowerCase()))
+      );
+      if (isFeedDuplicate) {
+        return { success: false, error: 'A feedback submission with this message already exists in our system.' };
+      }
+
+      const newRecord = {
+        name: data.name?.trim() || '',
+        email: data.email?.trim() || '', // Kept private
+        message: data.message.trim(),
+        category: data.category?.trim() || 'General Feedback',
+        isApproved: false,
+        status: 'pending' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const docRef = await addDoc(collection(db, 'feedback'), newRecord);
+      setAllFeedbackList((prev) => [{ id: docRef.id, ...newRecord }, ...prev]);
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error submitting feedback:', err);
+      return { success: false, error: err.message || 'Failed to submit feedback. Please try again.' };
+    }
+  };
+
+  const approveFeedback = async (id: string) => {
+    try {
+      if (id.startsWith('default-feed-')) {
+        return;
+      }
+      await updateDoc(doc(db, 'feedback', id), {
+        isApproved: true,
+        status: 'approved',
+        updatedAt: new Date().toISOString(),
+      });
+      setAllFeedbackList((prev) =>
+        prev.map((f) => (f.id === id ? { ...f, isApproved: true, status: 'approved' } : f))
+      );
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, `feedback/${id}`);
+      throw err;
+    }
+  };
+
+  const rejectFeedback = async (id: string) => {
+    try {
+      if (id.startsWith('default-feed-')) {
+        setFeedbackList((prev) => prev.filter((f) => f.id !== id));
+        return;
+      }
+      await updateDoc(doc(db, 'feedback', id), {
+        isApproved: false,
+        status: 'rejected',
+        updatedAt: new Date().toISOString(),
+      });
+      setAllFeedbackList((prev) =>
+        prev.map((f) => (f.id === id ? { ...f, isApproved: false, status: 'rejected' } : f))
+      );
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, `feedback/${id}`);
+      throw err;
+    }
+  };
+
+  const deleteFeedback = async (id: string) => {
+    try {
+      if (!id.startsWith('default-feed-')) {
+        await deleteDoc(doc(db, 'feedback', id));
+      }
+      setAllFeedbackList((prev) => prev.filter((f) => f.id !== id));
+      setFeedbackList((prev) => prev.filter((f) => f.id !== id));
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.DELETE, `feedback/${id}`);
+      throw err;
+    }
+  };
+
   const updateInquiry = async (id: string, updates: Partial<Inquiry>) => {
     try {
       const dataToSave = {
@@ -1306,6 +1684,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateInquiry,
         updateInquiryStatus,
         deleteInquiry,
+        testimonials,
+        allTestimonials,
+        submitTestimonial,
+        approveTestimonial,
+        rejectTestimonial,
+        deleteTestimonial,
+        feedbackList,
+        allFeedbackList,
+        submitFeedback,
+        approveFeedback,
+        rejectFeedback,
+        deleteFeedback,
         seedBaselineData,
       }}
     >

@@ -32,6 +32,11 @@ import {
   Pause,
   ArrowUp,
   ArrowDown,
+  Quote,
+  MessageSquare,
+  Check,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { uploadImageToStorage, uploadVideoToStorage, captureVideoThumbnail } from '../firebase';
@@ -107,10 +112,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     fetchInquiries,
     updateInquiryStatus,
     deleteInquiry,
+    allTestimonials,
+    approveTestimonial,
+    rejectTestimonial,
+    deleteTestimonial,
+    allFeedbackList,
+    approveFeedback,
+    rejectFeedback,
+    deleteFeedback,
     seedBaselineData,
   } = useData();
 
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [testimonialFilter, setTestimonialFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -682,6 +697,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <span className="text-slate-400 text-[11px] font-mono">
                   {faqs.length}
                 </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('testimonials')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === 'testimonials'
+                    ? 'bg-[#0B132B] text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-200/70'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Quote className="w-4 h-4 text-lime-400" />
+                  <span>Testimonials Review</span>
+                </div>
+                {allTestimonials.filter((t) => !t.isApproved && t.status !== 'rejected').length > 0 ? (
+                  <span className="bg-amber-400 text-slate-900 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                    {allTestimonials.filter((t) => !t.isApproved && t.status !== 'rejected').length}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-[11px] font-mono">
+                    {allTestimonials.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab('feedback')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                  activeTab === 'feedback'
+                    ? 'bg-[#0B132B] text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-200/70'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <MessageSquare className="w-4 h-4 text-lime-400" />
+                  <span>Visitor Feedback</span>
+                </div>
+                {allFeedbackList.filter((f) => !f.isApproved && f.status !== 'rejected').length > 0 ? (
+                  <span className="bg-amber-400 text-slate-900 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                    {allFeedbackList.filter((f) => !f.isApproved && f.status !== 'rejected').length}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-[11px] font-mono">
+                    {allFeedbackList.length}
+                  </span>
+                )}
               </button>
 
               <button
@@ -2478,6 +2539,444 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span>Save All Organization Changes to Firestore</span>
                     </button>
                   </form>
+                </div>
+              )}
+
+              {/* TAB 12: TESTIMONIALS REVIEW AND APPROVAL SYSTEM */}
+              {activeTab === 'testimonials' && (
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+                    <div>
+                      <h3 className="text-lg font-bold text-[#0B132B] flex items-center gap-2">
+                        <Quote className="w-5 h-5 text-lime-600" />
+                        <span>Testimonials Review & Approval System</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Review visitor-submitted testimonials. Newly submitted testimonials remain private until you click &ldquo;Approve & Publish&rdquo;.
+                      </p>
+                    </div>
+
+                    {/* Filter buttons */}
+                    <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setTestimonialFilter('all')}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          testimonialFilter === 'all'
+                            ? 'bg-[#0B132B] text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        All ({allTestimonials.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTestimonialFilter('pending')}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          testimonialFilter === 'pending'
+                            ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                            : 'text-amber-800 hover:bg-amber-100/60'
+                        }`}
+                      >
+                        Pending ({allTestimonials.filter((t) => !t.isApproved && t.status !== 'rejected').length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTestimonialFilter('approved')}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          testimonialFilter === 'approved'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-emerald-800 hover:bg-emerald-100/60'
+                        }`}
+                      >
+                        Approved ({allTestimonials.filter((t) => t.isApproved).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTestimonialFilter('rejected')}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          testimonialFilter === 'rejected'
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : 'text-rose-800 hover:bg-rose-100/60'
+                        }`}
+                      >
+                        Rejected ({allTestimonials.filter((t) => t.status === 'rejected').length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Testimonial items list */}
+                  {(() => {
+                    const filtered = allTestimonials.filter((item) => {
+                      if (testimonialFilter === 'pending') return !item.isApproved && item.status !== 'rejected';
+                      if (testimonialFilter === 'approved') return item.isApproved;
+                      if (testimonialFilter === 'rejected') return item.status === 'rejected';
+                      return true;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-12 text-center text-slate-500 max-w-md mx-auto">
+                          <Quote className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+                          <h4 className="font-bold text-sm text-slate-700">No Testimonials Found</h4>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {testimonialFilter === 'pending'
+                              ? 'There are no pending testimonials awaiting administrative review.'
+                              : testimonialFilter === 'approved'
+                              ? 'No approved testimonials in this category.'
+                              : 'No testimonials match the selected filter.'}
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {filtered.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`p-5 rounded-2xl border transition-all ${
+                              item.isApproved
+                                ? 'bg-white border-emerald-200 shadow-xs'
+                                : item.status === 'rejected'
+                                ? 'bg-slate-50 border-rose-200 opacity-75'
+                                : 'bg-amber-50/40 border-amber-300 shadow-sm'
+                            }`}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-black text-sm text-[#0B132B]">
+                                    {item.name}
+                                  </h4>
+                                  {item.isApproved ? (
+                                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                      ✓ Approved & Published
+                                    </span>
+                                  ) : item.status === 'rejected' ? (
+                                    <span className="text-[10px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full">
+                                      ✕ Rejected
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-black text-amber-900 bg-amber-200 border border-amber-300 px-2 py-0.5 rounded-full">
+                                      ⏳ Pending Review
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-slate-600 font-medium">
+                                  {item.title && <span>{item.title}</span>}
+                                  {item.title && item.organization && <span> &bull; </span>}
+                                  {item.organization && <span className="font-bold text-slate-800">{item.organization}</span>}
+                                  {item.service && (
+                                    <span className="ml-2 text-[10px] font-semibold text-lime-800 bg-lime-100 px-2 py-0.5 rounded-md">
+                                      {item.service}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {/* Rating Stars */}
+                                <div className="flex items-center gap-0.5 mr-2">
+                                  {[...Array(item.rating || 5)].map((_, i) => (
+                                    <span key={i} className="text-amber-400 text-xs">★</span>
+                                  ))}
+                                </div>
+
+                                {/* Actions: Approve, Reject, Delete */}
+                                {!item.isApproved && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        await approveTestimonial(item.id);
+                                        showNotice('success', `Testimonial from ${item.name} approved and published to website!`);
+                                      } catch (e: any) {
+                                        showNotice('error', e.message || 'Approval failed');
+                                      }
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                                    title="Approve and publish to public Testimonials section"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Approve & Publish</span>
+                                  </button>
+                                )}
+
+                                {item.status !== 'rejected' && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        await rejectTestimonial(item.id);
+                                        showNotice('success', `Testimonial rejected and hidden from public.`);
+                                      } catch (e: any) {
+                                        showNotice('error', e.message || 'Reject failed');
+                                      }
+                                    }}
+                                    className="bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-bold px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="Reject testimonial"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>Reject</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (window.confirm(`Permanently delete testimonial from ${item.name}?`)) {
+                                      try {
+                                        await deleteTestimonial(item.id);
+                                        showNotice('success', 'Testimonial deleted.');
+                                      } catch (e: any) {
+                                        showNotice('error', e.message || 'Delete failed');
+                                      }
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                  title="Delete record"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Full Quote */}
+                            <blockquote className="text-xs sm:text-sm text-slate-800 italic bg-white/70 p-3.5 rounded-xl border border-slate-200/80 leading-relaxed font-medium">
+                              &ldquo;{item.quote}&rdquo;
+                            </blockquote>
+
+                            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-3 pt-2 border-t border-slate-200/60">
+                              <span>Submitted: {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recent'}</span>
+                              <span>ID: {item.id}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* TAB 13: VISITOR FEEDBACK REVIEW & MODERATION */}
+              {activeTab === 'feedback' && (
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+                    <div>
+                      <h3 className="text-lg font-bold text-[#0B132B] flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-lime-600" />
+                        <span>Visitor Feedback Review & Moderation</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Read community suggestions and thoughts. Keep feedback private or choose &ldquo;Approve & Publish&rdquo; to showcase constructive notes on the public Visitor Feedback section.
+                      </p>
+                    </div>
+
+                    {/* Filter buttons */}
+                    <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setFeedbackFilter('all')}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          feedbackFilter === 'all'
+                            ? 'bg-[#0B132B] text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        All ({allFeedbackList.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFeedbackFilter('pending')}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          feedbackFilter === 'pending'
+                            ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                            : 'text-amber-800 hover:bg-amber-100/60'
+                        }`}
+                      >
+                        Pending ({allFeedbackList.filter((f) => !f.isApproved && f.status !== 'rejected').length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFeedbackFilter('approved')}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          feedbackFilter === 'approved'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-emerald-800 hover:bg-emerald-100/60'
+                        }`}
+                      >
+                        Approved ({allFeedbackList.filter((f) => f.isApproved).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFeedbackFilter('rejected')}
+                        className={`px-3 py-1.5 rounded-lg transition-all ${
+                          feedbackFilter === 'rejected'
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : 'text-rose-800 hover:bg-rose-100/60'
+                        }`}
+                      >
+                        Rejected ({allFeedbackList.filter((f) => f.status === 'rejected').length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Feedback items list */}
+                  {(() => {
+                    const filtered = allFeedbackList.filter((item) => {
+                      if (feedbackFilter === 'pending') return !item.isApproved && item.status !== 'rejected';
+                      if (feedbackFilter === 'approved') return item.isApproved;
+                      if (feedbackFilter === 'rejected') return item.status === 'rejected';
+                      return true;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-12 text-center text-slate-500 max-w-md mx-auto">
+                          <MessageSquare className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+                          <h4 className="font-bold text-sm text-slate-700">No Feedback Submissions</h4>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {feedbackFilter === 'pending'
+                              ? 'There is no pending visitor feedback awaiting review.'
+                              : feedbackFilter === 'approved'
+                              ? 'No approved feedback in this category.'
+                              : 'No submissions match the selected filter.'}
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {filtered.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`p-5 rounded-2xl border transition-all ${
+                              item.isApproved
+                                ? 'bg-white border-emerald-200 shadow-xs'
+                                : item.status === 'rejected'
+                                ? 'bg-slate-50 border-rose-200 opacity-75'
+                                : 'bg-amber-50/40 border-amber-300 shadow-sm'
+                            }`}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-black text-sm text-[#0B132B]">
+                                    {item.name || 'Anonymous Visitor'}
+                                  </h4>
+                                  {item.isApproved ? (
+                                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                      ✓ Approved & Public
+                                    </span>
+                                  ) : item.status === 'rejected' ? (
+                                    <span className="text-[10px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full">
+                                      ✕ Rejected / Private
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-black text-amber-900 bg-amber-200 border border-amber-300 px-2 py-0.5 rounded-full">
+                                      ⏳ Pending Review
+                                    </span>
+                                  )}
+                                  {item.category && (
+                                    <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                                      {item.category}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Private email notice - shown only to admin */}
+                                {item.email ? (
+                                  <div className="text-xs text-slate-600 flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">
+                                      Private Email (Admin Only)
+                                    </span>
+                                    <a
+                                      href={`mailto:${item.email}`}
+                                      className="font-mono text-xs text-[#0B132B] hover:underline"
+                                    >
+                                      {item.email}
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 italic">No email provided</span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {!item.isApproved && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        await approveFeedback(item.id);
+                                        showNotice('success', 'Feedback approved and published to public Visitor Feedback section!');
+                                      } catch (e: any) {
+                                        showNotice('error', e.message || 'Approval failed');
+                                      }
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                                    title="Approve for public display"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Approve & Publish</span>
+                                  </button>
+                                )}
+
+                                {item.status !== 'rejected' && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        await rejectFeedback(item.id);
+                                        showNotice('success', 'Feedback rejected and kept private.');
+                                      } catch (e: any) {
+                                        showNotice('error', e.message || 'Reject failed');
+                                      }
+                                    }}
+                                    className="bg-slate-200 hover:bg-rose-100 text-slate-700 hover:text-rose-700 font-bold px-3 py-1.5 rounded-lg text-xs inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="Reject feedback"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>Reject</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (window.confirm('Permanently delete this feedback?')) {
+                                      try {
+                                        await deleteFeedback(item.id);
+                                        showNotice('success', 'Feedback deleted.');
+                                      } catch (e: any) {
+                                        showNotice('error', e.message || 'Delete failed');
+                                      }
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                  title="Delete feedback"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Feedback message */}
+                            <p className="text-xs sm:text-sm text-slate-800 leading-relaxed bg-white/70 p-3.5 rounded-xl border border-slate-200/80 font-medium">
+                              {item.message}
+                            </p>
+
+                            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-3 pt-2 border-t border-slate-200/60">
+                              <span>Submitted: {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recent'}</span>
+                              <span>ID: {item.id}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

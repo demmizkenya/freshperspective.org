@@ -158,6 +158,7 @@ export const Footer: React.FC<FooterProps> = ({
               <li><a href="#gallery" className="hover:text-white">Visual Gallery</a></li>
               <li><a href="#brands-in-motion" className="hover:text-white text-lime-400 font-semibold">Brands In Motion (Adverts)</a></li>
               <li><a href="#testimonials" className="hover:text-white">Client Testimonials</a></li>
+              <li><a href="#feedback" className="hover:text-white">Visitor Feedback</a></li>
               <li><a href="#leadership" className="hover:text-white">Leadership & Governance</a></li>
               <li><a href="#insights" className="hover:text-white">Insights & Articles</a></li>
               <li><a href="#events" className="hover:text-white">Events & Summits</a></li>

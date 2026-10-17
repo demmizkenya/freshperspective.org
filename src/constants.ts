@@ -1,4 +1,4 @@
-import { SiteSettings, Service, FAQ } from './types';
+import { SiteSettings, Service, FAQ, Testimonial, VisitorFeedback } from './types';
 
 export const AUTHORIZED_ADMIN_EMAILS = [
   'danielowino233@gmail.com',
@@ -201,6 +201,108 @@ export const DEFAULT_VIDEO_ADVERTS = [
     isPublished: true,
     featured: false,
     createdAt: new Date().toISOString(),
+  },
+];
+
+export const DEFAULT_TESTIMONIALS: Testimonial[] = [
+  {
+    id: 'default-test-1',
+    name: 'Dr. Anthony Adeleke',
+    title: 'Managing Director',
+    organization: 'Apex Brand Ventures',
+    quote:
+      'Fresh Perspective Organization lived up to their motto with exceptional speed and precision. Their creative branding and video advertising elevated our regional product rollout beyond expectations.',
+    service: 'Brand Video & Identity',
+    rating: 5,
+    isApproved: true,
+    status: 'approved',
+    createdAt: new Date('2026-01-15').toISOString(),
+  },
+  {
+    id: 'default-test-2',
+    name: 'Sarah Jenkins',
+    title: 'Head of Communications',
+    organization: 'Horizon Academic Institute',
+    quote:
+      'From bespoke graphic assets to responsive web development, their multidisciplinary team delivered every single milestone ahead of schedule with remarkable craft and attention to detail.',
+    service: 'Web & Digital Media',
+    rating: 5,
+    isApproved: true,
+    status: 'approved',
+    createdAt: new Date('2026-02-10').toISOString(),
+  },
+  {
+    id: 'default-test-3',
+    name: 'Michael Okonjo',
+    title: 'Convener & Executive Director',
+    organization: 'Pan-African Leadership Forum',
+    quote:
+      'The commercial teaser videos and media coverage produced for our summit captured the exact energy we needed. Truly timely delivery with valuable works done.',
+    service: 'Event Production & Videos',
+    rating: 5,
+    isApproved: true,
+    status: 'approved',
+    createdAt: new Date('2026-03-01').toISOString(),
+  },
+  {
+    id: 'default-test-4',
+    name: 'Dr. Clara Mensah',
+    title: 'Operations Director',
+    organization: 'St. Jude Healthcare Network',
+    quote:
+      'Their creative strategy, copywriting, and targeted social media campaigns helped our healthcare network scale engagement by over 200%. Unmatched professionalism and communication.',
+    service: 'Digital Marketing & Copywriting',
+    rating: 5,
+    isApproved: true,
+    status: 'approved',
+    createdAt: new Date('2026-03-22').toISOString(),
+  },
+  {
+    id: 'default-test-5',
+    name: 'Engr. David O. Thorne',
+    title: 'Chief Executive Officer',
+    organization: 'Primefield Engineering & Logistics',
+    quote:
+      'Finding an agency that combines world-class creative talent with rigid adherence to delivery deadlines is rare. Fresh Perspective Organization sets the benchmark.',
+    service: 'Corporate Consulting & Portal',
+    rating: 5,
+    isApproved: true,
+    status: 'approved',
+    createdAt: new Date('2026-04-05').toISOString(),
+  },
+  {
+    id: 'default-test-6',
+    name: 'Amina Bello',
+    title: 'Founder & Creative Lead',
+    organization: 'Velvet Bloom Lifestyle',
+    quote:
+      'Their motion graphics and product advertisements gave our retail brand a fresh, premium identity. Clients immediately noticed the upgrade in our visual presence and market authority.',
+    service: 'Motion Graphics & Adverts',
+    rating: 5,
+    isApproved: true,
+    status: 'approved',
+    createdAt: new Date('2026-04-18').toISOString(),
+  },
+];
+
+export const DEFAULT_FEEDBACK: VisitorFeedback[] = [
+  {
+    id: 'default-feed-1',
+    name: 'Samuel K. Boateng',
+    message: 'The website interface is very clean and informative. Navigating through the services and viewing the team roster was effortless.',
+    category: 'Website Experience',
+    isApproved: true,
+    status: 'approved',
+    createdAt: new Date('2026-04-02').toISOString(),
+  },
+  {
+    id: 'default-feed-2',
+    name: 'Chioma Nwosu',
+    message: 'Great agency commitment to timely delivery. We appreciate the quick response from the quote inquiry team on WhatsApp.',
+    category: 'Service Quality',
+    isApproved: true,
+    status: 'approved',
+    createdAt: new Date('2026-04-10').toISOString(),
   },
 ];
 

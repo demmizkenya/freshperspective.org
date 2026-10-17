@@ -10,6 +10,7 @@ import { ProjectsSection } from './components/ProjectsSection';
 import { GallerySection } from './components/GallerySection';
 import { VideoAdvertsSection } from './components/VideoAdvertsSection';
 import { TestimonialsSection } from './components/TestimonialsSection';
+import { VisitorFeedbackSection } from './components/VisitorFeedbackSection';
 import { LeadershipSection } from './components/LeadershipSection';
 import { InsightsSection } from './components/InsightsSection';
 import { EventsSection } from './components/EventsSection';
@@ -101,7 +102,10 @@ export default function App() {
           onRequestQuote={(serviceTitle) => scrollToQuote(serviceTitle)}
         />
 
-        {/* 9. Leadership & Governance */}
+        {/* 9. Visitor Feedback Section */}
+        <VisitorFeedbackSection />
+
+        {/* 10. Leadership & Governance */}
         <LeadershipSection
           onOpenAdminAddLeader={() => handleOpenAdminWithTab('leadership')}
         />

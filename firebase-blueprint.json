@@ -205,6 +205,40 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "role"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Visitor-submitted and client testimonials subject to administrative review and approval",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "title": { "type": "string", "maxLength": 100 },
+        "organization": { "type": "string", "maxLength": 120 },
+        "quote": { "type": "string", "maxLength": 2000 },
+        "service": { "type": "string", "maxLength": 100 },
+        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+        "isApproved": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "quote", "isApproved", "status"]
+    },
+    "VisitorFeedback": {
+      "title": "VisitorFeedback",
+      "description": "Visitor feedback submissions with private contact information and administrative review",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 120 },
+        "message": { "type": "string", "maxLength": 3000 },
+        "category": { "type": "string", "maxLength": 100 },
+        "isApproved": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["message", "isApproved", "status"]
     }
   },
   "firestore": {
@@ -251,6 +285,14 @@
     "/inquiries/{inquiryId}": {
       "schema": "#/entities/Inquiry",
       "description": "Visitor contact and quote inquiries"
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": "#/entities/Testimonial",
+      "description": "Visitor-submitted and verified client testimonials"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "#/entities/VisitorFeedback",
+      "description": "Visitor feedback submissions with privacy protection"
     },
     "/admins/{adminUid}": {
       "schema": "#/entities/AdminUser",

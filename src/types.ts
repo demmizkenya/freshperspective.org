@@ -222,3 +222,30 @@ export interface VideoAdvert {
   updatedAt?: string;
 }
 
+export type SubmissionApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Testimonial {
+  id: string;
+  name: string;
+  title?: string;
+  organization?: string;
+  quote: string;
+  service?: string;
+  rating: number;
+  isApproved: boolean;
+  status: SubmissionApprovalStatus;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface VisitorFeedback {
+  id: string;
+  name?: string;
+  email?: string; // Strictly private - NEVER exposed to the public
+  message: string;
+  category?: string;
+  isApproved: boolean;
+  status: SubmissionApprovalStatus;
+  createdAt: string;
+  updatedAt?: string;
+}

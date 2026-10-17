@@ -2,9 +2,120 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAuthorizedAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email != null && (
+          request.auth.token.email.lower() == 'freshperspectiveorganization@gmail.com' ||
+          request.auth.token.email.lower() == 'danielowino233@gmail.com'
+        )) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Public website content: readable by everyone; editable only by authorized administrators
+    match /site_settings/{docId} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /professionals/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /services/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /projects/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /gallery/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /video_adverts/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /leadership/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /insights/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /events/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /publications/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    match /faqs/{id} {
+      allow read: if true;
+      allow write: if isAuthorizedAdmin();
+    }
+
+    // Inquiries: public visitors can submit quotes/inquiries; only authorized administrators can view, update, or delete
+    match /inquiries/{id} {
+      allow create: if request.resource.data.fullName is string &&
+                       request.resource.data.fullName.size() >= 2 &&
+                       request.resource.data.email is string &&
+                       request.resource.data.description is string;
+      allow read, update, delete: if isAuthorizedAdmin();
+    }
+
+    // Testimonials Review & Approval System:
+    // - Public visitors can ONLY read approved testimonials (isApproved == true)
+    // - Administrators can read all submissions (pending, approved, rejected)
+    // - Public visitors can submit testimonials, but ONLY as unapproved/pending
+    // - Only authorized administrators can approve, reject, update, or delete
+    match /testimonials/{id} {
+      allow read: if resource.data.isApproved == true || isAuthorizedAdmin();
+      allow create: if request.resource.data.isApproved == false &&
+                       (request.resource.data.status == 'pending' || !('status' in request.resource.data)) &&
+                       request.resource.data.name is string &&
+                       request.resource.data.name.size() >= 2 &&
+                       request.resource.data.quote is string &&
+                       request.resource.data.quote.size() >= 10;
+      allow update, delete: if isAuthorizedAdmin();
+    }
+
+    // Visitor Feedback Section:
+    // - Public visitors can ONLY read approved feedback (isApproved == true)
+    // - Administrators can read all submissions (pending, approved, rejected) with private contact info
+    // - Public visitors can submit feedback, but ONLY as unapproved/pending
+    // - Only authorized administrators can approve, reject, update, or delete
+    match /feedback/{id} {
+      allow read: if resource.data.isApproved == true || isAuthorizedAdmin();
+      allow create: if request.resource.data.isApproved == false &&
+                       (request.resource.data.status == 'pending' || !('status' in request.resource.data)) &&
+                       request.resource.data.message is string &&
+                       request.resource.data.message.size() >= 10;
+      allow update, delete: if isAuthorizedAdmin();
+    }
+
+    // Admin registry collection
+    match /admins/{uid} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthorizedAdmin();
     }
   }
 }
-
