@@ -18,7 +18,8 @@ export const ProfessionalsSection: React.FC<ProfessionalsSectionProps> = ({ onOp
     : published.filter((p) => p.category === selectedCategory);
 
   return (
-    <section id="professionals" className="py-20 md:py-28 bg-white border-b border-slate-200">
+    <section id="professionals" className="py-20 md:py-28 bg-white border-b border-slate-200 relative">
+      <span id="team" className="block -mt-24 pt-24 pointer-events-none absolute top-0" aria-hidden="true" />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">

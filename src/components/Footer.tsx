@@ -150,18 +150,20 @@ export const Footer: React.FC<FooterProps> = ({
             <h4 className="font-bold text-white uppercase tracking-wider mb-3">Navigation</h4>
             <ul className="space-y-1.5 text-slate-400">
               <li><a href="#home" className="hover:text-white">Home</a></li>
-              <li><a href="#executive-leadership" className="hover:text-white">CEO & Leadership</a></li>
+              <li><a href="#executive-leadership" className="hover:text-white">CEO Profile</a></li>
               <li><a href="#about" className="hover:text-white">About Us</a></li>
               <li><a href="#services" className="hover:text-white">Services</a></li>
-              <li><a href="#professionals" className="hover:text-white">Professionals</a></li>
-              <li><a href="#projects" className="hover:text-white">Projects</a></li>
-              <li><a href="#gallery" className="hover:text-white">Gallery</a></li>
-              <li><a href="#brands-in-motion" className="hover:text-white">Brands In Motion</a></li>
-              <li><a href="#insights" className="hover:text-white">Insights</a></li>
-              <li><a href="#events" className="hover:text-white">Events</a></li>
+              <li><a href="#professionals" className="hover:text-white">Team & Specialists</a></li>
+              <li><a href="#projects" className="hover:text-white">Projects & Portfolio</a></li>
+              <li><a href="#gallery" className="hover:text-white">Visual Gallery</a></li>
+              <li><a href="#brands-in-motion" className="hover:text-white text-lime-400 font-semibold">Brands In Motion (Adverts)</a></li>
+              <li><a href="#testimonials" className="hover:text-white">Client Testimonials</a></li>
+              <li><a href="#leadership" className="hover:text-white">Leadership & Governance</a></li>
+              <li><a href="#insights" className="hover:text-white">Insights & Articles</a></li>
+              <li><a href="#events" className="hover:text-white">Events & Summits</a></li>
               <li><a href="#publications" className="hover:text-white">Publications</a></li>
               <li><a href="#faqs" className="hover:text-white">FAQs</a></li>
-              <li><a href="#contact" className="hover:text-white">Contact</a></li>
+              <li><a href="#contact" className="hover:text-white">Contact & Quote</a></li>
             </ul>
           </div>
 
