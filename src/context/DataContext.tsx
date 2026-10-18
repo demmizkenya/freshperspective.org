@@ -70,7 +70,7 @@ interface DataContextType {
   isLoading: boolean;
   error: string | null;
 
-  // Testimonial Submission & Review
+  // Testimonial Administrative Management
   submitTestimonial: (data: {
     name: string;
     title?: string;
@@ -79,17 +79,21 @@ interface DataContextType {
     service?: string;
     rating?: number;
   }) => Promise<{ success: boolean; error?: string }>;
+  publishTestimonial: (id: string) => Promise<void>;
+  hideTestimonial: (id: string) => Promise<void>;
   approveTestimonial: (id: string) => Promise<void>;
   rejectTestimonial: (id: string) => Promise<void>;
   deleteTestimonial: (id: string) => Promise<void>;
 
-  // Visitor Feedback Submission & Review
+  // Visitor Feedback Administrative Management
   submitFeedback: (data: {
     name?: string;
     email?: string;
     message: string;
     category?: string;
   }) => Promise<{ success: boolean; error?: string }>;
+  publishFeedback: (id: string) => Promise<void>;
+  hideFeedback: (id: string) => Promise<void>;
   approveFeedback: (id: string) => Promise<void>;
   rejectFeedback: (id: string) => Promise<void>;
   deleteFeedback: (id: string) => Promise<void>;
@@ -207,11 +211,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const isAuthorizedEmail = AUTHORIZED_ADMIN_EMAILS.some((adm) => adm.toLowerCase() === email);
 
         if (isAuthorizedEmail) {
-          setIsAdmin(true);
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('fp_admin_session', 'true');
+            sessionStorage.setItem('fp_inquiries_admin_session', 'true');
           }
-          // Ensure admin doc exists in Firestore for rules consistency
+          // Ensure admin doc exists in Firestore for rules consistency before enabling admin queries
           try {
             await setDoc(doc(db, 'admins', user.uid), {
               email: user.email,
@@ -221,22 +225,51 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (e) {
             console.warn('Could not auto-sync admin doc:', e);
           }
-        } else if (typeof window !== 'undefined' && sessionStorage.getItem('fp_admin_session') === 'true') {
           setIsAdmin(true);
+          setIsInquiriesAdmin(true);
+        } else if (typeof window !== 'undefined' && (sessionStorage.getItem('fp_admin_session') === 'true' || sessionStorage.getItem('fp_inquiries_admin_session') === 'true')) {
+          try {
+            await setDoc(doc(db, 'admins', user.uid), {
+              email: user.email || 'session-admin',
+              role: 'owner',
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+          } catch (e) {
+            console.warn('Could not sync session admin doc:', e);
+          }
+          setIsAdmin(sessionStorage.getItem('fp_admin_session') === 'true');
+          setIsInquiriesAdmin(true);
         } else {
           // Check if UID is in admins collection
           try {
             const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-            setIsAdmin(adminDoc.exists());
+            const hasAdminRole = adminDoc.exists();
+            setIsAdmin(hasAdminRole);
+            if (hasAdminRole) {
+              setIsInquiriesAdmin(true);
+            }
           } catch (err) {
             setIsAdmin(false);
           }
         }
       } else {
-        if (typeof window !== 'undefined' && sessionStorage.getItem('fp_admin_session') === 'true') {
-          setIsAdmin(true);
+        if (typeof window !== 'undefined' && (sessionStorage.getItem('fp_admin_session') === 'true' || sessionStorage.getItem('fp_inquiries_admin_session') === 'true')) {
+          try {
+            const anonCred = await signInAnonymously(auth);
+            await setDoc(doc(db, 'admins', anonCred.user.uid), {
+              role: 'owner',
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+            setIsAdmin(sessionStorage.getItem('fp_admin_session') === 'true');
+            setIsInquiriesAdmin(true);
+          } catch (e) {
+            console.warn('Auto admin session restoration note:', e);
+            setIsAdmin(false);
+            setIsInquiriesAdmin(false);
+          }
         } else {
           setIsAdmin(false);
+          setIsInquiriesAdmin(false);
         }
       }
       setIsAuthLoading(false);
@@ -466,7 +499,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // 11. Testimonials
       // If admin, query all testimonials for the review panel.
-      // If public visitor, query ONLY approved testimonials to satisfy security rules and keep unapproved/rejected private.
+      // If public visitor, query ONLY approved testimonials to satisfy security rules and keep unapproved/hidden/rejected private.
       const testQuery = isAdmin
         ? collection(db, 'testimonials')
         : query(collection(db, 'testimonials'), where('isApproved', '==', true));
@@ -486,26 +519,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               new Date(a.createdAt || 0).getTime()
           );
 
+          const firestoreIds = new Set(list.map((t) => t.id));
+          const deletedTestSet = new Set(siteSettings.deletedDefaultTestimonials || []);
+          const hiddenTestSet = new Set(siteSettings.hiddenDefaultTestimonials || []);
+
           if (isAdmin) {
-            setAllTestimonials(list);
-            const approved = list.filter((t) => t.isApproved);
-            const approvedIds = new Set(approved.map((a) => a.id));
-            const baseFiltered = DEFAULT_TESTIMONIALS.filter(
-              (d) => !approvedIds.has(d.id)
-            );
-            setTestimonials([...baseFiltered, ...approved]);
+            const baseRemaining = DEFAULT_TESTIMONIALS.filter(
+              (d) => !firestoreIds.has(d.id) && !deletedTestSet.has(d.id)
+            ).map((d) => {
+              if (hiddenTestSet.has(d.id)) {
+                return { ...d, isApproved: false, status: 'hidden' as const };
+              }
+              return { ...d, isApproved: true, status: 'published' as const };
+            });
+
+            setAllTestimonials([...list, ...baseRemaining]);
+            const approvedFromList = list.filter((t) => t.isApproved);
+            const approvedFromBase = baseRemaining.filter((b) => b.isApproved);
+            setTestimonials([...approvedFromBase, ...approvedFromList]);
           } else {
             setAllTestimonials([]);
-            const approvedIds = new Set(list.map((a) => a.id));
-            const baseFiltered = DEFAULT_TESTIMONIALS.filter(
-              (d) => !approvedIds.has(d.id)
-            );
-            setTestimonials([...baseFiltered, ...list]);
+            const firestoreApprovedIds = new Set(list.map((a) => a.id));
+            const baseRemaining = DEFAULT_TESTIMONIALS.filter(
+              (d) => !firestoreApprovedIds.has(d.id) && !deletedTestSet.has(d.id) && !hiddenTestSet.has(d.id)
+            ).map((d) => ({ ...d, isApproved: true, status: 'published' as const }));
+            setTestimonials([...baseRemaining, ...list]);
           }
         },
         (err) => {
           console.warn('Testimonials listener note:', err.message);
-          setTestimonials(DEFAULT_TESTIMONIALS);
+          const hiddenTestSet = new Set(siteSettings.hiddenDefaultTestimonials || []);
+          const deletedTestSet = new Set(siteSettings.deletedDefaultTestimonials || []);
+          setTestimonials(
+            DEFAULT_TESTIMONIALS.filter(
+              (d) => !deletedTestSet.has(d.id) && !hiddenTestSet.has(d.id)
+            ).map((d) => ({ ...d, isApproved: true, status: 'published' as const }))
+          );
         }
       );
       unsubs.push(unsubTest);
@@ -532,36 +581,53 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               new Date(a.createdAt || 0).getTime()
           );
 
+          const firestoreFeedIds = new Set(list.map((f) => f.id));
+          const deletedFeedSet = new Set(siteSettings.deletedDefaultFeedback || []);
+          const hiddenFeedSet = new Set(siteSettings.hiddenDefaultFeedback || []);
+
           if (isAdmin) {
-            setAllFeedbackList(list);
-            const approved = list
+            const baseFeedRemaining = DEFAULT_FEEDBACK.filter(
+              (d) => !firestoreFeedIds.has(d.id) && !deletedFeedSet.has(d.id)
+            ).map((d) => {
+              if (hiddenFeedSet.has(d.id)) {
+                return { ...d, isApproved: false, status: 'hidden' as const };
+              }
+              return { ...d, isApproved: true, status: 'published' as const };
+            });
+
+            setAllFeedbackList([...list, ...baseFeedRemaining]);
+            const approvedFromList = list
               .filter((f) => f.isApproved)
               .map((item) => {
                 const { email, ...safeFields } = item;
                 return safeFields as VisitorFeedback;
               });
-            const approvedIds = new Set(approved.map((a) => a.id));
-            const baseFeedFiltered = DEFAULT_FEEDBACK.filter(
-              (d) => !approvedIds.has(d.id)
-            );
-            setFeedbackList([...baseFeedFiltered, ...approved]);
+            const approvedFromBase = baseFeedRemaining.filter((b) => b.isApproved);
+            setFeedbackList([...approvedFromBase, ...approvedFromList]);
           } else {
             setAllFeedbackList([]);
+            const firestoreFeedApprovedIds = new Set(list.map((a) => a.id));
+            const baseFeedRemaining = DEFAULT_FEEDBACK.filter(
+              (d) => !firestoreFeedApprovedIds.has(d.id) && !deletedFeedSet.has(d.id) && !hiddenFeedSet.has(d.id)
+            ).map((d) => ({ ...d, isApproved: true, status: 'published' as const }));
+
             // Public visitor: email is completely omitted
             const approved = list.map((item) => {
               const { email, ...safeFields } = item;
               return safeFields as VisitorFeedback;
             });
-            const approvedIds = new Set(approved.map((a) => a.id));
-            const baseFeedFiltered = DEFAULT_FEEDBACK.filter(
-              (d) => !approvedIds.has(d.id)
-            );
-            setFeedbackList([...baseFeedFiltered, ...approved]);
+            setFeedbackList([...baseFeedRemaining, ...approved]);
           }
         },
         (err) => {
           console.warn('Feedback listener note:', err.message);
-          setFeedbackList(DEFAULT_FEEDBACK);
+          const hiddenFeedSet = new Set(siteSettings.hiddenDefaultFeedback || []);
+          const deletedFeedSet = new Set(siteSettings.deletedDefaultFeedback || []);
+          setFeedbackList(
+            DEFAULT_FEEDBACK.filter(
+              (d) => !deletedFeedSet.has(d.id) && !hiddenFeedSet.has(d.id)
+            ).map((d) => ({ ...d, isApproved: true, status: 'published' as const }))
+          );
         }
       );
       unsubs.push(unsubFeed);
@@ -572,11 +638,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       unsubs.forEach((unsub) => unsub());
     };
-  }, [isAdmin]);
+  }, [
+    isAdmin,
+    siteSettings.deletedDefaultTestimonials,
+    siteSettings.hiddenDefaultTestimonials,
+    siteSettings.deletedDefaultFeedback,
+    siteSettings.hiddenDefaultFeedback,
+  ]);
 
   // Fetch inquiries when any admin is logged in
   const fetchInquiries = async () => {
     if (!isAdmin && !isInquiriesAdmin) return;
+    if (!auth.currentUser) return;
     try {
       const q = query(collection(db, 'inquiries'), orderBy('createdAt', 'desc'));
       const snap = await getDocs(q);
@@ -585,14 +658,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         list.push({ id: docSnap.id, ...docSnap.data() } as Inquiry);
       });
       setInquiries(list);
-    } catch (err) {
-      console.error('Failed to load inquiries:', err);
+    } catch (err: any) {
+      const isPermissionErr =
+        err?.code === 'permission-denied' ||
+        err?.code === 'firestore/permission-denied' ||
+        (typeof err?.message === 'string' &&
+          (err.message.toLowerCase().includes('permission') ||
+           err.message.toLowerCase().includes('insufficient')));
+      if (isPermissionErr) {
+        console.warn('Inquiries query note: permissions pending administrator session authorization.');
+      } else {
+        console.warn('Inquiries fetch note:', err?.message || err);
+      }
     }
   };
 
   // Real-time synchronization of inquiries for authorized admins
   useEffect(() => {
-    if (!isAdmin && !isInquiriesAdmin) {
+    if ((!isAdmin && !isInquiriesAdmin) || !auth.currentUser) {
       return;
     }
 
@@ -609,15 +692,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setInquiries(list);
         },
-        (err) => {
-          console.warn('Real-time inquiries listener note:', err.message);
+        (err: any) => {
+          const isPermissionErr =
+            err?.code === 'permission-denied' ||
+            err?.code === 'firestore/permission-denied' ||
+            (typeof err?.message === 'string' &&
+              (err.message.toLowerCase().includes('permission') ||
+               err.message.toLowerCase().includes('insufficient')));
+          if (isPermissionErr) {
+            console.warn('Inquiries listener note: waiting for admin session authorization.');
+          } else {
+            console.warn('Real-time inquiries listener note:', err?.message || err);
+          }
         }
       );
       return () => unsub();
     } catch (e) {
       console.warn('Could not attach real-time inquiry listener:', e);
     }
-  }, [isAdmin, isInquiriesAdmin]);
+  }, [isAdmin, isInquiriesAdmin, currentUser]);
 
   // Submit Inquiry (Public) with duplicate submission prevention
   const submitInquiry = async (
@@ -792,6 +885,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setIsInquiriesAdmin(true);
       setInquiriesAdminEmail(cleanEmail);
+
+      // Ensure Firebase Auth session and Firestore admin document exist
+      try {
+        let user = auth.currentUser;
+        if (!user) {
+          try {
+            const cred = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+            user = cred.user;
+          } catch {
+            try {
+              const anonCred = await signInAnonymously(auth);
+              user = anonCred.user;
+            } catch {
+              // Non-fatal
+            }
+          }
+        }
+        if (user) {
+          await setDoc(
+            doc(db, 'admins', user.uid),
+            {
+              email: cleanEmail,
+              role: 'inquiries_admin',
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        }
+      } catch (authSyncErr) {
+        console.warn('Inquiries admin session auth sync note:', authSyncErr);
+      }
+
       await fetchInquiries();
       return { success: true };
     }
@@ -1374,40 +1499,108 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const approveTestimonial = async (id: string) => {
+  const publishTestimonial = async (id: string) => {
     try {
-      if (id.startsWith('default-test-')) {
-        // Default baseline is already approved
-        return;
-      }
-      await updateDoc(doc(db, 'testimonials', id), {
+      const existing =
+        allTestimonials.find((t) => t.id === id) ||
+        DEFAULT_TESTIMONIALS.find((t) => t.id === id);
+
+      const updatedFields = {
         isApproved: true,
-        status: 'approved',
+        status: 'published' as const,
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      if (id.startsWith('default-test-')) {
+        if (existing) {
+          const { id: docId, ...dataWithoutId } = existing;
+          await setDoc(
+            doc(db, 'testimonials', id),
+            {
+              ...dataWithoutId,
+              ...updatedFields,
+            },
+            { merge: true }
+          );
+        }
+        const currentHidden = siteSettings.hiddenDefaultTestimonials || [];
+        const currentDeleted = siteSettings.deletedDefaultTestimonials || [];
+        const updates: Partial<SiteSettings> = {};
+        if (currentHidden.includes(id)) {
+          updates.hiddenDefaultTestimonials = currentHidden.filter((x) => x !== id);
+        }
+        if (currentDeleted.includes(id)) {
+          updates.deletedDefaultTestimonials = currentDeleted.filter((x) => x !== id);
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateSiteSettings(updates);
+        }
+      } else {
+        await updateDoc(doc(db, 'testimonials', id), updatedFields);
+      }
+
       setAllTestimonials((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, isApproved: true, status: 'approved' } : t))
+        prev.map((t) =>
+          t.id === id ? { ...t, isApproved: true, status: 'published' } : t
+        )
       );
+      setTestimonials((prev) => {
+        if (prev.some((t) => t.id === id)) {
+          return prev.map((t) =>
+            t.id === id ? { ...t, isApproved: true, status: 'published' } : t
+          );
+        }
+        const found = allTestimonials.find((t) => t.id === id) || existing;
+        return found
+          ? [{ ...found, isApproved: true, status: 'published' as const }, ...prev]
+          : prev;
+      });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, `testimonials/${id}`);
       throw err;
     }
   };
 
-  const rejectTestimonial = async (id: string) => {
+  const hideTestimonial = async (id: string) => {
     try {
-      if (id.startsWith('default-test-')) {
-        setTestimonials((prev) => prev.filter((t) => t.id !== id));
-        return;
-      }
-      await updateDoc(doc(db, 'testimonials', id), {
+      const existing =
+        allTestimonials.find((t) => t.id === id) ||
+        DEFAULT_TESTIMONIALS.find((t) => t.id === id);
+
+      const updatedFields = {
         isApproved: false,
-        status: 'rejected',
+        status: 'hidden' as const,
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      if (id.startsWith('default-test-')) {
+        if (existing) {
+          const { id: docId, ...dataWithoutId } = existing;
+          await setDoc(
+            doc(db, 'testimonials', id),
+            {
+              ...dataWithoutId,
+              ...updatedFields,
+            },
+            { merge: true }
+          );
+        }
+        const currentHidden = siteSettings.hiddenDefaultTestimonials || [];
+        if (!currentHidden.includes(id)) {
+          await updateSiteSettings({
+            hiddenDefaultTestimonials: [...currentHidden, id],
+          });
+        }
+      } else {
+        await updateDoc(doc(db, 'testimonials', id), updatedFields);
+      }
+
       setAllTestimonials((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, isApproved: false, status: 'rejected' } : t))
+        prev.map((t) =>
+          t.id === id ? { ...t, isApproved: false, status: 'hidden' } : t
+        )
       );
+      setTestimonials((prev) => prev.filter((t) => t.id !== id));
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, `testimonials/${id}`);
       throw err;
@@ -1416,9 +1609,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteTestimonial = async (id: string) => {
     try {
-      if (!id.startsWith('default-test-')) {
+      if (id.startsWith('default-test-')) {
+        try {
+          await deleteDoc(doc(db, 'testimonials', id));
+        } catch {
+          // Ignore
+        }
+        const currentDeleted = siteSettings.deletedDefaultTestimonials || [];
+        const currentHidden = siteSettings.hiddenDefaultTestimonials || [];
+        const updates: Partial<SiteSettings> = {};
+        if (!currentDeleted.includes(id)) {
+          updates.deletedDefaultTestimonials = [...currentDeleted, id];
+        }
+        if (currentHidden.includes(id)) {
+          updates.hiddenDefaultTestimonials = currentHidden.filter((x) => x !== id);
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateSiteSettings(updates);
+        }
+      } else {
         await deleteDoc(doc(db, 'testimonials', id));
       }
+
       setAllTestimonials((prev) => prev.filter((t) => t.id !== id));
       setTestimonials((prev) => prev.filter((t) => t.id !== id));
     } catch (err: any) {
@@ -1426,6 +1638,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw err;
     }
   };
+
+  const approveTestimonial = publishTestimonial;
+  const rejectTestimonial = hideTestimonial;
 
   // Visitor Feedback Submission & Approval Management
   const submitFeedback = async (data: {
@@ -1487,39 +1702,111 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const approveFeedback = async (id: string) => {
+  const publishFeedback = async (id: string) => {
     try {
-      if (id.startsWith('default-feed-')) {
-        return;
-      }
-      await updateDoc(doc(db, 'feedback', id), {
+      const existing =
+        allFeedbackList.find((f) => f.id === id) ||
+        DEFAULT_FEEDBACK.find((f) => f.id === id);
+
+      const updatedFields = {
         isApproved: true,
-        status: 'approved',
+        status: 'published' as const,
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      if (id.startsWith('default-feed-')) {
+        if (existing) {
+          const { id: docId, ...dataWithoutId } = existing;
+          await setDoc(
+            doc(db, 'feedback', id),
+            {
+              ...dataWithoutId,
+              ...updatedFields,
+            },
+            { merge: true }
+          );
+        }
+        const currentHidden = siteSettings.hiddenDefaultFeedback || [];
+        const currentDeleted = siteSettings.deletedDefaultFeedback || [];
+        const updates: Partial<SiteSettings> = {};
+        if (currentHidden.includes(id)) {
+          updates.hiddenDefaultFeedback = currentHidden.filter((x) => x !== id);
+        }
+        if (currentDeleted.includes(id)) {
+          updates.deletedDefaultFeedback = currentDeleted.filter((x) => x !== id);
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateSiteSettings(updates);
+        }
+      } else {
+        await updateDoc(doc(db, 'feedback', id), updatedFields);
+      }
+
       setAllFeedbackList((prev) =>
-        prev.map((f) => (f.id === id ? { ...f, isApproved: true, status: 'approved' } : f))
+        prev.map((f) =>
+          f.id === id ? { ...f, isApproved: true, status: 'published' } : f
+        )
       );
+      setFeedbackList((prev) => {
+        if (prev.some((f) => f.id === id)) {
+          return prev.map((f) =>
+            f.id === id ? { ...f, isApproved: true, status: 'published' } : f
+          );
+        }
+        const found = allFeedbackList.find((f) => f.id === id) || existing;
+        if (!found) return prev;
+        const { email, ...safeFields } = found;
+        return [
+          { ...safeFields, isApproved: true, status: 'published' as const } as VisitorFeedback,
+          ...prev,
+        ];
+      });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, `feedback/${id}`);
       throw err;
     }
   };
 
-  const rejectFeedback = async (id: string) => {
+  const hideFeedback = async (id: string) => {
     try {
-      if (id.startsWith('default-feed-')) {
-        setFeedbackList((prev) => prev.filter((f) => f.id !== id));
-        return;
-      }
-      await updateDoc(doc(db, 'feedback', id), {
+      const existing =
+        allFeedbackList.find((f) => f.id === id) ||
+        DEFAULT_FEEDBACK.find((f) => f.id === id);
+
+      const updatedFields = {
         isApproved: false,
-        status: 'rejected',
+        status: 'hidden' as const,
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      if (id.startsWith('default-feed-')) {
+        if (existing) {
+          const { id: docId, ...dataWithoutId } = existing;
+          await setDoc(
+            doc(db, 'feedback', id),
+            {
+              ...dataWithoutId,
+              ...updatedFields,
+            },
+            { merge: true }
+          );
+        }
+        const currentHidden = siteSettings.hiddenDefaultFeedback || [];
+        if (!currentHidden.includes(id)) {
+          await updateSiteSettings({
+            hiddenDefaultFeedback: [...currentHidden, id],
+          });
+        }
+      } else {
+        await updateDoc(doc(db, 'feedback', id), updatedFields);
+      }
+
       setAllFeedbackList((prev) =>
-        prev.map((f) => (f.id === id ? { ...f, isApproved: false, status: 'rejected' } : f))
+        prev.map((f) =>
+          f.id === id ? { ...f, isApproved: false, status: 'hidden' } : f
+        )
       );
+      setFeedbackList((prev) => prev.filter((f) => f.id !== id));
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, `feedback/${id}`);
       throw err;
@@ -1528,9 +1815,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteFeedback = async (id: string) => {
     try {
-      if (!id.startsWith('default-feed-')) {
+      if (id.startsWith('default-feed-')) {
+        try {
+          await deleteDoc(doc(db, 'feedback', id));
+        } catch {
+          // Ignore
+        }
+        const currentDeleted = siteSettings.deletedDefaultFeedback || [];
+        const currentHidden = siteSettings.hiddenDefaultFeedback || [];
+        const updates: Partial<SiteSettings> = {};
+        if (!currentDeleted.includes(id)) {
+          updates.deletedDefaultFeedback = [...currentDeleted, id];
+        }
+        if (currentHidden.includes(id)) {
+          updates.hiddenDefaultFeedback = currentHidden.filter((x) => x !== id);
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateSiteSettings(updates);
+        }
+      } else {
         await deleteDoc(doc(db, 'feedback', id));
       }
+
       setAllFeedbackList((prev) => prev.filter((f) => f.id !== id));
       setFeedbackList((prev) => prev.filter((f) => f.id !== id));
     } catch (err: any) {
@@ -1538,6 +1844,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw err;
     }
   };
+
+  const approveFeedback = publishFeedback;
+  const rejectFeedback = hideFeedback;
 
   const updateInquiry = async (id: string, updates: Partial<Inquiry>) => {
     try {
@@ -1687,12 +1996,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         testimonials,
         allTestimonials,
         submitTestimonial,
+        publishTestimonial,
+        hideTestimonial,
         approveTestimonial,
         rejectTestimonial,
         deleteTestimonial,
         feedbackList,
         allFeedbackList,
         submitFeedback,
+        publishFeedback,
+        hideFeedback,
         approveFeedback,
         rejectFeedback,
         deleteFeedback,

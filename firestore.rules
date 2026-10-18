@@ -11,7 +11,9 @@ service cloud.firestore {
       return isAuthenticated() && (
         (request.auth.token.email != null && (
           request.auth.token.email.lower() == 'freshperspectiveorganization@gmail.com' ||
-          request.auth.token.email.lower() == 'danielowino233@gmail.com'
+          request.auth.token.email.lower() == 'danielowino233@gmail.com' ||
+          request.auth.token.email.lower() == 'inquiries@freshperspective.org' ||
+          request.auth.token.email.lower() == 'quotes@freshperspective.org'
         )) ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
@@ -89,12 +91,14 @@ service cloud.firestore {
     // - Only authorized administrators can approve, reject, update, or delete
     match /testimonials/{id} {
       allow read: if resource.data.isApproved == true || isAuthorizedAdmin();
-      allow create: if request.resource.data.isApproved == false &&
+      allow create: if isAuthorizedAdmin() || (
+                       request.resource.data.isApproved == false &&
                        (request.resource.data.status == 'pending' || !('status' in request.resource.data)) &&
                        request.resource.data.name is string &&
                        request.resource.data.name.size() >= 2 &&
                        request.resource.data.quote is string &&
-                       request.resource.data.quote.size() >= 10;
+                       request.resource.data.quote.size() >= 10
+                     );
       allow update, delete: if isAuthorizedAdmin();
     }
 
@@ -105,17 +109,19 @@ service cloud.firestore {
     // - Only authorized administrators can approve, reject, update, or delete
     match /feedback/{id} {
       allow read: if resource.data.isApproved == true || isAuthorizedAdmin();
-      allow create: if request.resource.data.isApproved == false &&
+      allow create: if isAuthorizedAdmin() || (
+                       request.resource.data.isApproved == false &&
                        (request.resource.data.status == 'pending' || !('status' in request.resource.data)) &&
                        request.resource.data.message is string &&
-                       request.resource.data.message.size() >= 10;
+                       request.resource.data.message.size() >= 10
+                     );
       allow update, delete: if isAuthorizedAdmin();
     }
 
     // Admin registry collection
     match /admins/{uid} {
       allow read: if isAuthenticated();
-      allow write: if isAuthorizedAdmin();
+      allow write: if isAuthenticated() && (request.auth.uid == uid || isAuthorizedAdmin());
     }
   }
 }

@@ -36,6 +36,10 @@ export interface SiteSettings {
   ceoProfile?: CeoProfile;
   logoUrl?: string;
   logoPath?: string;
+  deletedDefaultTestimonials?: string[];
+  deletedDefaultFeedback?: string[];
+  hiddenDefaultTestimonials?: string[];
+  hiddenDefaultFeedback?: string[];
   updatedAt?: string;
 }
 
@@ -222,7 +226,7 @@ export interface VideoAdvert {
   updatedAt?: string;
 }
 
-export type SubmissionApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type SubmissionApprovalStatus = 'pending' | 'published' | 'hidden' | 'approved' | 'rejected';
 
 export interface Testimonial {
   id: string;

@@ -46,6 +46,10 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
     photoUrl: '',
     photoPath: '',
   },
+  deletedDefaultTestimonials: [],
+  deletedDefaultFeedback: [],
+  hiddenDefaultTestimonials: [],
+  hiddenDefaultFeedback: [],
 };
 
 export const DEFAULT_SERVICES: Omit<Service, 'id'>[] = [
